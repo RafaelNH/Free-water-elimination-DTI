@@ -188,8 +188,7 @@ def _wls_iter(design_matrix, inv_design, sig, min_diffusivity, Diso=3e-3,
 # non-linear least squares fit procedure
 # -------------------------------------------------------------------------
 
-def nlls_fit_tensor(design_matrix, data, fw_params=None, Diso=3e-3,
-                    weighting=None, sigma=None, jac=False):
+def nlls_fit_tensor(design_matrix, data, fw_params=None, Diso=3e-3):
     """
     Fit the water elimination tensor model using the non-linear least-squares.
 
@@ -251,9 +250,7 @@ def nlls_fit_tensor(design_matrix, data, fw_params=None, Diso=3e-3,
         this_tensor, status = opt.leastsq(_nlls_err_func, start_params[:8],
                                           args=(design_matrix,
                                                 flat_data[vox],
-                                                Diso,
-                                                weighting,
-                                                sigma))
+                                                Diso))
 
         # The parameters are the evals and the evecs:
         try:
@@ -277,8 +274,7 @@ def nlls_fit_tensor(design_matrix, data, fw_params=None, Diso=3e-3,
     return fw_params
 
 
-def _nlls_err_func(tensor_elements, design_matrix, data, Diso=3e-3,
-                   weighting=None, sigma=None):
+def _nlls_err_func(tensor_elements, design_matrix, data, Diso=3e-3):
     """ Error function for the non-linear least-squares fit of the tensor water
     elimination model.
 
