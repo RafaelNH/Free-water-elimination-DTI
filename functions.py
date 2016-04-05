@@ -282,6 +282,50 @@ def _nlls_err_func(tensor_elements, design_matrix, data, Diso=3e-3,
     return residuals
 
 
+def _nlls_jacobian_func(tensor_elements, design_matrix, data, Diso=3e-3,
+                        weighting=None, sigma=None, cholesky=False,
+                        f_transform=False):
+    """The Jacobian is the first derivative of the least squares error
+    function.
+    Parameters
+    ----------
+    tensor_elements : array (8, )
+        The six independent elements of the diffusion tensor followed by
+        -log(S0) and the volume fraction f of the water elimination
+        compartment. Note that if f_transform is true, volume fraction f is
+        converted to ft = arcsin(2*f - 1) + pi/2
+    design_matrix : array
+        The design matrix
+    Diso : float, optional
+        Value of the free water isotropic diffusion. Default is set to 3e-3
+        $mm^{2}.s^{-1}$. Please ajust this value if you are assuming different
+        units of diffusion.
+    f_transform : bool, optional
+        If true, the water volume fraction was converted to
+        ft = arcsin(2*f - 1) + pi/2, insuring f estimates between 0 and 1.
+        See fwdti.nlls_fit_tensor
+        Default: True
+    """
+    tensor = np.copy(tensor_elements)
+    if f_transform:
+        f = 0.5 * (1 + np.sin(tensor[7] - np.pi/2))
+    else:
+        f = tensor[7]
+
+    t = np.exp(np.dot(design_matrix, tensor[:7]))
+    s = np.exp(np.dot(design_matrix,
+                      np.array([Diso, 0, Diso, 0, 0, Diso, tensor[6]])))
+    T = (f-1.0) * t[:, None] * design_matrix
+    S = np.zeros(design_matrix.shape)
+    S[:, 6] = f * s
+
+    if f_transform:
+        df = (t-s) * (0.5*np.cos(tensor[7]-np.pi/2))
+    else:
+        df = (t-s)
+    return np.concatenate((T - S, df[:, None]), axis=1)
+
+
 def nlls_fit_tensor(design_matrix, data, fw_params=None, Diso=3e-3,
                     cholesky=False, f_transform=True, mask=None):
     """
