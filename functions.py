@@ -327,7 +327,7 @@ def _nlls_jacobian_func(tensor_elements, design_matrix, data, Diso=3e-3,
 
 
 def nlls_fit_tensor(design_matrix, data, fw_params=None, Diso=3e-3,
-                    cholesky=False, f_transform=True, mask=None):
+                    cholesky=False, f_transform=True, jac=False, mask=None):
     """
     Fit the water elimination tensor model using the non-linear least-squares.
 
@@ -360,6 +360,8 @@ def nlls_fit_tensor(design_matrix, data, fw_params=None, Diso=3e-3,
         procedure to ft = arcsin(2*f - 1) + pi/2, insuring f estimates between
         0 and 1.
         Default: True
+    jac : bool
+        Use the Jacobian? Default: False
     mask : array
         A boolean array used to mark the coordinates in the data that
         should be analyzed that has the shape data.shape[-1]
@@ -411,12 +413,21 @@ def nlls_fit_tensor(design_matrix, data, fw_params=None, Diso=3e-3,
 
         # Use the Levenberg-Marquardt algorithm wrapped in opt.leastsq
         start_params = np.concatenate((dt, [-np.log(s0), f]), axis=0)
-        this_tensor, status = opt.leastsq(_nlls_err_func, start_params[:8],
-                                          args=(design_matrix,
-                                                flat_data[vox],
-                                                Diso,
-                                                cholesky,
-                                                f_transform))
+        if jac:
+            this_tensor, status = opt.leastsq(_nlls_err_func, start_params[:8],
+                                              args=(design_matrix,
+                                                    flat_data[vox],
+                                                    Diso,
+                                                    cholesky,
+                                                    f_transform),
+                                              Dfun=_nlls_jacobian_func)
+        else:
+            this_tensor, status = opt.leastsq(_nlls_err_func, start_params[:8],
+                                              args=(design_matrix,
+                                                    flat_data[vox],
+                                                    Diso,
+                                                    cholesky,
+                                                    f_transform))
 
         # Invert the cholesky decomposition if this was requested
         if cholesky:
