@@ -520,7 +520,7 @@ def cholesky_to_lower_triangular(R):
 # -------------------------------------------------------------------------
 
 def nlls_fit_tensor_bounds(design_matrix, data, fw_params=None, Diso=3e-3,
-                           mask=None):
+                           bounds=None, jac=False, mask=None):
     """
     Fit the water elimination tensor model using the non-linear least-squares
     and subject to boundaries.
@@ -545,15 +545,14 @@ def nlls_fit_tensor_bounds(design_matrix, data, fw_params=None, Diso=3e-3,
         Value of the free water isotropic diffusion. Default is set to 3e-3
         $mm^{2}.s^{-1}$. Please ajust this value if you are assuming different
         units of diffusion.
-    cholesky : bool, optional
-        If true it uses cholesky decomposition to insure that diffusion tensor
-        is positive define.
-        Default: False
-    f_transform : bool, optional
-        If true, the water volume fractions is converted during the convergence
-        procedure to ft = arcsin(2*f - 1) + pi/2, insuring f estimates between
-        0 and 1.
-        Default: True
+    bounds : 2-tuple of arrays with 14 elements, optional
+        Lower and upper bounds on independent variables. Use np.inf with an
+        appropriate sign to disable bounds on all or some variables. When
+        bounds is set to None the following default variable bounds is used:
+            ([0., -Diso, 0., -Diso, -Diso, 0., 0., np.exp(-10.)],
+             [Diso, Diso, Diso, Diso, Diso, Diso, 1., np.exp(10.)])
+    jac : bool
+        Use the Jacobian? Default: False
     mask : array
         A boolean array used to mark the coordinates in the data that
         should be analyzed that has the shape data.shape[-1]
@@ -580,6 +579,20 @@ def nlls_fit_tensor_bounds(design_matrix, data, fw_params=None, Diso=3e-3,
         fw_params = np.reshape(fw_params[mask],
                                (-1, fw_params.shape[-1]))
 
+    if bounds==None:
+        bounds = ([0., -Diso, 0., -Diso, -Diso, 0., -10., 0],
+                  [Diso, Diso, Diso, Diso, Diso, Diso, 10., 1])
+    else:
+        # In the helper subfunctions it was easier to have log(S0) first than 
+        # the water volume. Therefore, we have to reorder the boundaries if
+        # specified by the user
+        S0low = np.log(bounds[0][7])
+        S0hig = np.log(bounds[1][7])
+        bounds[0][7] = bounds[0][6]
+        bounds[1][7] = bounds[1][6]
+        bounds[0][6] = S0low
+        bounds[1][6] = S0hig   
+
     for vox in range(flat_data.shape[0]):
         if np.all(flat_data[vox] == 0):
             raise ValueError("The data in this voxel contains only zeros")
@@ -591,33 +604,26 @@ def nlls_fit_tensor_bounds(design_matrix, data, fw_params=None, Diso=3e-3,
         evecs = params[3:12].reshape((3, 3))
         dt = lower_triangular(np.dot(np.dot(evecs, np.diag(evals)), evecs.T))
         s0 = params[13]
+        f = params[12]
 
-        # Cholesky decomposition if requested
-        if cholesky:
-            dt = lower_triangular_to_cholesky(dt)
-
-        # f transformation if requested
-        if f_transform:
-            f = np.arcsin(2*params[12] - 1) + np.pi/2
-        else:
-            f = params[12]
-
-        # Use the Levenberg-Marquardt algorithm wrapped in opt.leastsq
+        # Use the Levenberg-Marquardt algorithm wrapped in opt.least_squares
         start_params = np.concatenate((dt, [-np.log(s0), f]), axis=0)
-        this_tensor, status = opt.leastsq(_nlls_err_func, start_params[:8],
-                                          args=(design_matrix,
-                                                flat_data[vox],
-                                                Diso,
-                                                cholesky,
-                                                f_transform))
-
-        # Invert the cholesky decomposition if this was requested
-        if cholesky:
-            this_tensor[:6] = cholesky_to_lower_triangular(this_tensor[:6])
-
-        # Invert f transformation if this was requested
-        if f_transform:
-            this_tensor[7] = 0.5 * (1 + np.sin(this_tensor[7] - np.pi/2))
+        lb = np.array(bounds[0])
+        ub = np.array(bounds[1])
+        start_params[start_params<lb] = lb[start_params<lb]
+        start_params[start_params>ub] = ub[start_params>ub]       
+        if jac:
+            out = opt.least_squares(_nlls_err_func, start_params[:8],
+                                    args=(design_matrix, flat_data[vox],
+                                          Diso, False, False),
+                                    jac=_nlls_jacobian_func,
+                                    bounds=bounds)
+        else:
+            out = opt.least_squares(_nlls_err_func, start_params[:8],
+                                    args=(design_matrix, flat_data[vox],
+                                          Diso, False, False),
+                                    bounds=bounds)
+        this_tensor = out.x
 
         # The parameters are the evals and the evecs:
         fw_params[vox, 12] = this_tensor[7]
