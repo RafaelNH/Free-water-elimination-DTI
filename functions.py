@@ -460,9 +460,124 @@ def cholesky_to_lower_triangular(R):
     Dzz = R[2]**2 + R[4]**2 + R[5]**2
     return np.array([Dxx, Dxy, Dyy, Dxz, Dyz, Dzz])
 
+# -------------------------------------------------------------------------
+# Supplementary function
+# -------------------------------------------------------------------------
 
-common_fit_methods = {'WLLS': wls_fit_tensor,
-                      'WLS': wls_fit_tensor,
-                      'NLLS': nlls_fit_tensor,
-                      'NLS': nlls_fit_tensor,
-                      }
+def nlls_fit_tensor_bounds(design_matrix, data, fw_params=None, Diso=3e-3,
+                           mask=None):
+    """
+    Fit the water elimination tensor model using the non-linear least-squares
+    and subject to boundaries.
+
+    Parameters
+    ----------
+    design_matrix : array (g, 7)
+        Design matrix holding the covariants used to solve for the regression
+        coefficients.
+    data : array ([X, Y, Z, ...], g)
+        Data or response variables holding the data. Note that the last
+        dimension should contain the data. It makes no copies of data.
+    fw_params: ([X, Y, Z, ...], 14), optional
+           A first model parameters guess (3 eigenvalues, 3 coordinates
+           of 3 eigenvalues, the volume fraction of the free water
+           compartment, and the estimate of the non diffusion-weighted signal
+           S0). If the initial fw_paramters are not given, function will use
+           the WLS free water elimination algorithm to estimate the parameters
+           first guess.
+           Default: None
+    Diso : float, optional
+        Value of the free water isotropic diffusion. Default is set to 3e-3
+        $mm^{2}.s^{-1}$. Please ajust this value if you are assuming different
+        units of diffusion.
+    cholesky : bool, optional
+        If true it uses cholesky decomposition to insure that diffusion tensor
+        is positive define.
+        Default: False
+    f_transform : bool, optional
+        If true, the water volume fractions is converted during the convergence
+        procedure to ft = arcsin(2*f - 1) + pi/2, insuring f estimates between
+        0 and 1.
+        Default: True
+    mask : array
+        A boolean array used to mark the coordinates in the data that
+        should be analyzed that has the shape data.shape[-1]
+
+    Returns
+    -------
+    nlls_params: for each voxel the eigen-values and eigen-vectors of the
+        tissue tensor and the volume fraction of the free water compartment.
+    """
+    if mask is None:
+        # Flatten it to 2D either way:
+        flat_data = data.reshape((-1, data.shape[-1]))
+    else:
+        # Check for valid shape of the mask
+        if mask.shape != data.shape[:-1]:
+            raise ValueError("Mask is not the same shape as data.")
+        mask = np.array(mask, dtype=bool, copy=False)
+        flat_data = np.reshape(data[mask], (-1, data.shape[-1]))
+
+    # Use the WLS method parameters as the starting point if fw_params is None:
+    if np.any(fw_params) is None:
+        fw_params = wls_fit_tensor(design_matrix, flat_data,  Diso=Diso)
+    else:
+        fw_params = np.reshape(fw_params[mask],
+                               (-1, fw_params.shape[-1]))
+
+    for vox in range(flat_data.shape[0]):
+        if np.all(flat_data[vox] == 0):
+            raise ValueError("The data in this voxel contains only zeros")
+
+        params = fw_params[vox]
+
+        # converting evals and evecs to diffusion tensor elements
+        evals = params[:3]
+        evecs = params[3:12].reshape((3, 3))
+        dt = lower_triangular(np.dot(np.dot(evecs, np.diag(evals)), evecs.T))
+        s0 = params[13]
+
+        # Cholesky decomposition if requested
+        if cholesky:
+            dt = lower_triangular_to_cholesky(dt)
+
+        # f transformation if requested
+        if f_transform:
+            f = np.arcsin(2*params[12] - 1) + np.pi/2
+        else:
+            f = params[12]
+
+        # Use the Levenberg-Marquardt algorithm wrapped in opt.leastsq
+        start_params = np.concatenate((dt, [-np.log(s0), f]), axis=0)
+        this_tensor, status = opt.leastsq(_nlls_err_func, start_params[:8],
+                                          args=(design_matrix,
+                                                flat_data[vox],
+                                                Diso,
+                                                cholesky,
+                                                f_transform))
+
+        # Invert the cholesky decomposition if this was requested
+        if cholesky:
+            this_tensor[:6] = cholesky_to_lower_triangular(this_tensor[:6])
+
+        # Invert f transformation if this was requested
+        if f_transform:
+            this_tensor[7] = 0.5 * (1 + np.sin(this_tensor[7] - np.pi/2))
+
+        # The parameters are the evals and the evecs:
+        fw_params[vox, 12] = this_tensor[7]
+        fw_params[vox, 13] = np.exp(-this_tensor[6])
+        evals, evecs = decompose_tensor(from_lower_triangular(this_tensor[:6]))
+        fw_params[vox, :3] = evals
+        fw_params[vox, 3:12] = evecs.ravel()
+    
+    if mask is None:
+        out_shape = data.shape[:-1] + (-1, )
+        fw_params = fw_params.reshape(out_shape)
+        return fw_params
+
+    else:
+        fw_params_all = np.zeros(data.shape[:-1] + (14,))
+        fw_params_all[mask, :] = fw_params
+        return fw_params_all
+
