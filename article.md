@@ -33,7 +33,7 @@ The two procedures to fit the free water elimination DTI model were implemented
 in python. Since no source implementation was previously provided by Hoy and
 colleagues, all formulas of the original paper were carefully review.
 
-**The Weighted-Linear Least Square Solution (WLLS).** Two typos were found
+**The Weighted-Linear Least Square Solution (WLS).** Two typos were found
 on the formulas of the first proposed algorithm. First, the free-water adjusted
 diffusion-weighted signal formula (original article's Methods subsection
 ‘FWE-DTI’) should be written as:
@@ -46,43 +46,79 @@ matrix solution should be given as:
 
 $$\gamma = (W^TS^2W)^{-1}W^{T}S^{2}y$$
 
-Moreover, to insure that the WLLS method convergences to the local minima,
+Moreover, to insure that the WLS method convergences to the local minima,
 on the second and third iteration to refine the precision, the water
-contamination volume fraction are resampled with steps sizes of ± .1 and ± .01
+contamination volume fraction were resampled with steps sizes of ± .1 and ± .01
 instead of the step sizes of ± .05 and ± .005 suggested by Hoy and Colleges.
 
 **Non-Linear Least Square Solution (NLS)**. For the non-linear convergence
 procedure, as suggested by Hoy and Colleges [1], the model parameters initial
-guess are adjusted to the values estimated from the WLS approach. For computing
+guess were adjusted to the values estimated from the WLS approach. For computing
 speed optiminzation, instead of using the modified Newton's method approach
-proposed in the original article, the non-linear covergence is followed using
+proposed in the original article, the non-linear covergence was followed using
 the wrapped modified levenberg-marquardt algorithm available at Python's
-open-source software for mathematics, science, and engineering Scipy
-(http://scipy.org/, scipy.optimize.leastsq). To constrain the models parameters
-to plausibe range, the free water volume fraction $f$ are converted to
-$f_t = \arcsin (2f-1) + \pi / 2$, while the diffusion tensor are decomposed to
-their Cholesky decomposition to insure the tensor's symmetric positive
-definiteness.    
-
+open-source software for mathematics, science, and engineering
+(function scipy.optimize.leastsq of Scipy http://scipy.org/). To constrain the
+models parameters to plausibe range, the free water volume fraction $f$ was 
+converted to $f_t = \arcsin (2f-1) + \pi / 2$. To compare the robustness of the
+techniques with and without this constrains, the free water volume fraction
+transformation was implemented as an optional function feature. In addition to the
+scipy.optimize.leastsq, the more recent Scipy's optimization function
+scipy.optimize.least_square (available in Scipy's version 0.17) was also tested.
+This allows solving the non-linear problems directly bounded with predefined
+constrains, however for the free water elimination model this did not show to
+overcome the robustness and time speed of the procedure
+scipy.optimize.leastsq when the proposed f transformation was used (see
+supplementary_notebook.ipynb for more details). To speed the non-linear
+performance, the free water elimination DTI model jacobian was analytically
+derived and incorporated to the non-linear procedure (for the details of the
+jacobian derivation see supplementary_material.md). As an expansion of the work
+done by Hoy and colleagues, we also allow users to use of Cholesky decomposition
+of the diffusion tensor to insure that this is a positive defined tensor [4].
+Due to the increase of the model's mathematical complexity when the Cholesky
+decomposition is used, this cannot be used when the analytical Jacobian
+derivation is selected.
 
 **Implemtation Dependencies**. In addition to the Scipy's dependencies, both
 free water elimination fitting procedures requires modules from the open source
-software project Diffusion Imaging (Dipy, http://nipy.org/dipy/) [3] since they
-use the standard diffusion tensor processing functions which are already
-implemented in Dipy. Although, for this study, the core algorithms of the
-free water elimination procedures are implemented in separate functions, they
-are corrently being incorporated as a Dipy's model reconstruction module
-(https://github.com/nipy/dipy/pull/835). Our functions also requires the python
-pakage NumPy (http://www.numpy.org/).
-
+software project Diffusion Imaging (Dipy, http://nipy.org/dipy/) [3] since these
+contain all necessary standard diffusion tensor processing functions. Although,
+the core algorithms of the free water elimination procedures were implemented
+separately from Dipy, in the near future, they will be incorporated as a Dipy's
+model reconstruction module (https://github.com/nipy/dipy/pull/835). Our model
+fit functions also requires the python pakage NumPy (http://www.numpy.org/).
 
 ### 2.2 Simulations
+In this study, the Hoy and colleagues simulations for the methods optimal
+acquisition parameters are reproduces (i.e. simulations along 32 diffusion
+direction for b-values 500 and 1500 s.mm^{-2} and with six b-value=0 images). 
 The monte carlos simulations are performed using the multi-tensor simulation
-model also available in Dipy.
+module available in Dipy. As the original article, fitting procedures are
+tested for voxels with 5 different FA values and with constant diffusion trace
+of $2.4 \times 10^{-3} mm^{2}.s^{-1}$. The eigenvalues used for the 5 FA levels
+are reported in Table 1.
+
+Table 1: Eigenvalues values used for the simulations of the study
+
+FA            0                      0.11                   0.22                   0.3                    0.71
+------------ ---------------------- ---------------------- ---------------------- ---------------------- ----------------------
+$\lambda_1$  $8.00 \times 10^{-4}$  $9.00 \times 10^{-4}$  $1.00 \times 10^{-3}$  $1.08 \times 10^{-3}$  $1.60 \times 10^{-3}$
+$\lambda_2$  $8.00 \times 10^{-4}$  $7.63 \times 10^{-4}$  $7.25 \times 10^{-4}$  $6.95 \times 10^{-4}$  $5.00 \times 10^{-4}$
+$\lambda_3$  $8.00 \times 10^{-4}$  $7.38 \times 10^{-4}$  $6.75 \times 10^{-4}$  $6.25 \times 10^{-4}$  $3.00 \times 10^{-4}$
+
+
+For each FA value, eleven different degrees of free water contamination were
+evaluated (f values equaly spaced from 0 to 1). To access the robustness of the
+procedure, Rician noise with a SNR of 40 relative to the b-value = 0 images was
+used. For each FA and f-value pair, simulations were performed for 120
+different  diffusion tensor orientation. Simulations for each diffusion tensor
+orientation were repeated 100 times making a total of 12000 simulation
+iterations for each FA and f-value pair.
 
 ### 2.3 Real data testing
 
 ## 3. Results
+
 
 ## 4. Conclusion
 
@@ -111,3 +147,8 @@ doi: 10.1002/nbm.1543.
 Descoteaux, M., Nimmo-Smith, I., and Dipy Contributors, 2014. Dipy, a library
 for the analysis of diffusion MRI data. Frontiers in Neuroinformatics 8 (8).
 doi: 10.3389/fninf.2014.00008.
+
+[4] Koay, C.G., Carew, J.D., Alexander, A.L., Basser, P.J., & Meyerand, M.E.
+(2006). Investigation of anomalous estimates of tensor-derived quantities in
+diffusion tensor imaging. Magnetic Resonance in Medicine, 55(4), 930–936.
+doi:10.1002/mrm.20832
