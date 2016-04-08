@@ -1,5 +1,4 @@
-# Re: Optimization of a free water elimination two-compartment model for 
-diffusion tensor imaging.
+# Re: Optimization of a free water elimination two-compartment model for diffusion tensor imaging.
 
 ## Introduction
 
@@ -22,11 +21,10 @@ their algorithm were implemented "by a group member with no formal programming
 training and without optimization for speed", their evaluation tests showed
 that their procedures are able to provide diffusion based measures stable
 to different free water contamination degree. In this work, the two algorithms
-described by Hoy and colleagues are reviewed, optimized and tested on
-monte-carlo simulations based also in the evaluations done by Hoy and
-colleagues [1]. Our goal is to provide the first reference implementation of
-the procedures to fit the free water contamination model optimized for both
-speed and robustness.
+described by Hoy and colleagues are reviewed, optimized and tested using
+monte-carlo simulations. Our goal is to provide the first reference
+implementation of the procedures to fit the free water contamination model
+optimized for both speed and robustness.
 
 ## 2. Methods
 
@@ -36,7 +34,7 @@ in python. Since no source implementation was previously provided by Hoy and
 colleagues, all formulas of the original paper were carefully review.
 
 **The Weighted-Linear Least Square Solution (WLLS).** Two typos were found
-on the formulas of this algorithm. First, the free-water adjusted
+on the formulas of the first proposed algorithm. First, the free-water adjusted
 diffusion-weighted signal formula (original article's Methods subsection
 ‘FWE-DTI’) should be written as:
 
@@ -50,25 +48,37 @@ $$\gamma = (W^TS^2W)^{-1}W^{T}S^{2}y$$
 
 Moreover, to insure that the WLLS method convergences to the local minima,
 on the second and third iteration to refine the precision, the water
-contamination volume fraction were resampled with steps sizes of ± .1 and ± .01
+contamination volume fraction are resampled with steps sizes of ± .1 and ± .01
 instead of the step sizes of ± .05 and ± .005 suggested by Hoy and Colleges.
 
-**Non-Linear Least Square Solution (NLLS)**. For the non-linear convergence
-procedure the parameters initial guest were adjusted to the values estimated
-from the WLLS approach as suggested by Hoy and Colleges [1].
+**Non-Linear Least Square Solution (NLS)**. For the non-linear convergence
+procedure, as suggested by Hoy and Colleges [1], the model parameters initial
+guess are adjusted to the values estimated from the WLS approach. For computing
+speed optiminzation, instead of using the modified Newton's method approach
+proposed in the original article, the non-linear covergence is followed using
+the wrapped modified levenberg-marquardt algorithm available at Python's
+open-source software for mathematics, science, and engineering Scipy
+(http://scipy.org/, scipy.optimize.leastsq). To constrain the models parameters
+to plausibe range, the free water volume fraction $f$ are converted to
+$f_t = \arcsin (2f-1) + \pi / 2$, while the diffusion tensor are decomposed to
+their Cholesky decomposition to insure the tensor's symmetric positive
+definiteness.    
 
-**Implemtation Dependencies**. Both fitting procedures requires also modules
-from the open source software project Diffusion Imaging (Dipy,
-http://nipy.org/dipy/) [3]. Although, for this study, the core of each
-procedure was implemented in separate functions for the models parameter
-estimation, the DT derived measures (diffusion eigenvalues, and diffusion
-fractions anisotropy) are processed using the already implemented Dipy’s
-standard DTI modules.
+
+**Implemtation Dependencies**. In addition to the Scipy's dependencies, both
+free water elimination fitting procedures requires modules from the open source
+software project Diffusion Imaging (Dipy, http://nipy.org/dipy/) [3] since they
+use the standard diffusion tensor processing functions which are already
+implemented in Dipy. Although, for this study, the core algorithms of the
+free water elimination procedures are implemented in separate functions, they
+are corrently being incorporated as a Dipy's model reconstruction module
+(https://github.com/nipy/dipy/pull/835). Our functions also requires the python
+pakage NumPy (http://www.numpy.org/).
+
 
 ### 2.2 Simulations
 The monte carlos simulations are performed using the multi-tensor simulation
-model of the open source software project Diffusion Imaging in python
-(Dipy, http://nipy.org/dipy/).
+model also available in Dipy.
 
 ### 2.3 Real data testing
 
