@@ -60,24 +60,36 @@ the wrapped modified levenberg-marquardt algorithm available at Python's
 open-source software for mathematics, science, and engineering
 (function scipy.optimize.leastsq of Scipy http://scipy.org/). To constrain the
 models parameters to plausibe range, the free water volume fraction $f$ was 
-converted to $f_t = \arcsin (2f-1) + \pi / 2$. To compare the robustness of the
-techniques with and without this constrains, the free water volume fraction
-transformation was implemented as an optional function feature. In addition to the
-scipy.optimize.leastsq, the more recent Scipy's optimization function
-scipy.optimize.least_square (available in Scipy's version 0.17) was also tested.
-This allows solving the non-linear problems directly bounded with predefined
+converted to $f_t = \arcsin (2f-1) + \pi / 2$. This free water volume fraction
+transformation was implemented as an optional function feature so that 
+the robustness of the techniques with and without this constrains is compared.
+In addition to the scipy.optimize.leastsq, the more recent Scipy's optimization
+function scipy.optimize.least_square (available in Scipy's version 0.17) was also
+tested. This allows solving the non-linear problems directly bounded with predefined
 constrains, however for the free water elimination model this did not show to
-overcome the robustness and time speed of the procedure
-scipy.optimize.leastsq when the proposed f transformation was used (see
-supplementary_notebook.ipynb for more details). To speed the non-linear
-performance, the free water elimination DTI model jacobian was analytically
-derived and incorporated to the non-linear procedure (for the details of the
-jacobian derivation see supplementary_material.md). As an expansion of the work
-done by Hoy and colleagues, we also allow users to use of Cholesky decomposition
-of the diffusion tensor to insure that this is a positive defined tensor [4].
-Due to the increase of the model's mathematical complexity when the Cholesky
-decomposition is used, this cannot be used when the analytical Jacobian
+overcome the robustness and time speed of the procedure scipy.optimize.leastsq 
+when the proposed f transformation was used (see supplementary_notebook.ipynb 
+for more details). To speed the non-linear performance, the free water elimination
+DTI model jacobian was analytically derived and incorporated to the non-linear
+procedure (for the details of the jacobian derivation see supplementary_material.md).
+As an expansion of the work done by Hoy and colleagues, we also allow users to
+use of Cholesky decomposition of the diffusion tensor to insure that this is
+a positive defined tensor [4]. Due to the increase of the model's mathematical
+complexity the Cholesky decomposition cannot be used when the analytical Jacobian
 derivation is selected.
+
+**Removing problematic estimates**
+
+For cases that the ground truth free water volume fraction is one (i.e. voxels
+containing only free water), the tissue's diffusion tensor can fully represent
+the diffusion signal which erratically induce estimates of the water volume 
+fraction near to one. To remove this problematic cases, for all voxels with
+standard DTI's mean diffusivity values larger than 2.7 mm^{2}.s^{-1}, the free
+water volume fraction is set to one while all tissue's diffusion tensor
+parameters are set to zero. This mean diffusivity threshold was adjusted to 90%
+of the theoretical free water diffusion value, however this can be adjusted by
+changing the optional input 'mdreg' in both WLS and NLS free water elimination
+procedures.
 
 **Implemtation Dependencies**. In addition to the Scipy's dependencies, both
 free water elimination fitting procedures requires modules from the open source
@@ -85,8 +97,8 @@ software project Diffusion Imaging (Dipy, http://nipy.org/dipy/) [3] since these
 contain all necessary standard diffusion tensor processing functions. Although,
 the core algorithms of the free water elimination procedures were implemented
 separately from Dipy, in the near future, they will be incorporated as a Dipy's
-model reconstruction module (https://github.com/nipy/dipy/pull/835). Our model
-fit functions also requires the python pakage NumPy (http://www.numpy.org/).
+model reconstruction module (https://github.com/nipy/dipy/pull/835). Our functions
+also requires the python pakage NumPy (http://www.numpy.org/).
 
 ### 2.2 Simulations
 In this study, the Hoy and colleagues simulations for the methods optimal
@@ -111,13 +123,12 @@ For each FA value, eleven different degrees of free water contamination were
 evaluated (f values equaly spaced from 0 to 1). To access the robustness of the
 procedure, Rician noise with a SNR of 40 relative to the b-value = 0 images was
 used. For each FA and f-value pair, simulations were performed for 120
-different  diffusion tensor orientation. Simulations for each diffusion tensor
+different diffusion tensor orientation. Simulations for each diffusion tensor
 orientation were repeated 100 times making a total of 12000 simulation
 iterations for each FA and f-value pair.
 
-### 2.3 Real data testing
-
 ## 3. Results
+
 
 
 ## 4. Conclusion
