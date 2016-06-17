@@ -49,7 +49,8 @@ Diffusion-weighted Magnetic Resonance Imaging (DWI) is a non-invasive biomedical
 imaging technique that allows us to infer properties of brain tissue
 microstructures in vivo. Diffusion tensor imaging (DTI), one of the most
 commonly used DWI techniques, models anisotropy diffusion of tissues using a
-second-order tensor known as diffusion tensor (DT) [@Basser1994-zd, @Basser1994-hg]. DTI-based measures such as the fractional anisotropy (FA) are
+second-order tensor known as diffusion tensor (DT) [@Basser1994-zd, @Basser1994-hg].
+DTI-based measures such as the fractional anisotropy (FA) are
 normally used as an indicator of white matter coherence. However, these measures
 are not always specific to one particular type of tissue. For example, diffusion
 anisotropy in regions near the cerebral ventricle and parenchyma can be
@@ -57,8 +58,8 @@ underestimated by partial volume effects of the cerebral spinal fluid (CSF). To
 remove the influence of this free water diffusion contamination, the DTI model
 can be expanded to take into account two compartments representing the diffusion
 contributions from the tissue and from the CSF. Recently, two procedures were
-proposed by Hoy and colleagues [@Hoy2014-lk,] to fit the free water elimination of
-DWI data acquired with two or more diffusion gradient-weightings [1]. Although
+proposed by Hoy and colleagues to fit the free water elimination of
+DWI data acquired with two or more diffusion gradient-weightings [@Hoy2014-lk,]. Although
 the authors mentioned that their algorithm were implemented "by a group member
 with no formal programming training and without optimization for speed", their
 evaluation tests showed that their procedures are able to provide diffusion
@@ -106,7 +107,7 @@ contamination volume fraction were resampled with steps sizes of 0.1 and 0.01
 instead of the step sizes of 0.05 and 0.005 suggested by Hoy and Colleges.
 
 **Non-Linear Least Square Solution (NLS)**. For the non-linear convergence
-procedure, as suggested by Hoy and Colleges [1], the model parameters initial
+procedure, as suggested by Hoy and Colleges [@Hoy2014-lk,], the model parameters initial
 guess were adjusted to the values estimated from the WLS approach. For computing
 speed optiminzation, instead of using the modified Newton's method approach
 proposed in the original article, the non-linear covergence was followed using
@@ -133,14 +134,27 @@ diffusion tensor to insure that this is a positive defined tensor
 the Cholesky decomposition is used, this cannot be used when the analytical
 Jacobian derivation is selected.
 
-**Implemtation Dependencies**. In addition to the Scipy's dependencies, both
+**Removing problematic estimates**
+
+For cases that the ground truth free water volume fraction is one (i.e. voxels
+containing only free water), the tissue's diffusion tensor can fully represent
+the diffusion signal which erratically induce estimates of the water volume 
+fraction near to one. To remove this problematic cases, for all voxels with
+standard DTI's mean diffusivity values larger than 2.7 mm^{2}.s^{-1}, the free
+water volume fraction is set to one while all tissue's diffusion tensor
+parameters are set to zero. This mean diffusivity threshold was adjusted to 90%
+of the theoretical free water diffusion value, however this can be adjusted by
+changing the optional input 'mdreg' in both WLS and NLS free water elimination
+procedures.
+
+**Implementation Dependencies**. In addition to the Scipy's dependencies, both
 free water elimination fitting procedures requires modules from the open source
-software project Diffusion Imaging (Dipy, http://nipy.org/dipy/,  [@Garyfallidis2012-zp]) since these contain all necessary standard diffusion
-tensor processing functions. Although, the core algorithms of the free water
-elimination procedures were implemented separately from Dipy, in the near
-future, they will be incorporated as a Dipy's model reconstruction module
-(https://github.com/nipy/dipy/pull/835). Our model fit functions also requires
-the python pakage NumPy (http://www.numpy.org/).
+software project Diffusion Imaging (Dipy, http://nipy.org/dipy/,  [@Garyfallidis2012-zp]) 
+since these contain all necessary standard diffusion tensor processing functions.
+Although, the core algorithms of the free water elimination procedures were
+implemented separately from Dipy, in the near future, they will be incorporated
+as a Dipy's model reconstruction module (https://github.com/nipy/dipy/pull/835).
+Our functions also requires the python pakage NumPy (http://www.numpy.org/).
 
 ### 2.2 Simulations
 In this study, the Hoy and colleagues simulations for the methods optimal
