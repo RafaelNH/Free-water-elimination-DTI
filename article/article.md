@@ -35,7 +35,7 @@ Optimization of a free water elimination two-compartment model for diffusion
 tensor imaging. NeuroImage 103, 323-333. doi: 10.1016/j.neuroimage.2014.09.053
 "
 Bibliography:
-  your_article_name.bib
+  article.bib
 
 ---
 
