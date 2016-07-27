@@ -9,7 +9,7 @@ Address:
   - code:    1
     address: MRC, Cognition and Brain Sciences Unit, Cambridge, Cambridgeshire, UK
   - code:    2
-    address: Affiliation Dept/Program/Center, Institution Name, City, State, Country
+    address: The University of Washington eScience Institute, Seattle, WA, USA
 Contact:
   - rafaelnh21@gmail.com
 Editor:
