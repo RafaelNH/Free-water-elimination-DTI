@@ -9,7 +9,7 @@ Address:
   - code:    1
     address: MRC, Cognition and Brain Sciences Unit, Cambridge, Cambridgeshire, UK
   - code:    2
-    address: Affiliation Dept/Program/Center, Institution Name, City, State, Country
+    address: The University of Washington eScience Institute, Seattle, WA, USA
 Contact:
   - rafaelnh21@gmail.com
 Editor:
@@ -45,7 +45,7 @@ Diffusion-weighted Magnetic Resonance Imaging (DWI) is a non-invasive biomedical
 imaging technique that allows us to infer properties of brain tissue
 microstructures in vivo. Diffusion tensor imaging (DTI), one of the most
 commonly used DWI techniques, models anisotropy diffusion of tissues using a
-second-order tensor known as diffusion tensor (DT) [@Basser1994-zd, @Basser1994-hg].
+second-order tensor known as diffusion tensor (DT) [@Basser1994-zd], [@Basser1994-hg].
 DTI-based measures such as the fractional anisotropy (FA) are
 normally used as an indicator of white matter coherence. However, these measures
 are not always specific to one particular type of tissue. For example, diffusion
@@ -64,7 +64,7 @@ the first open source reference implementation of the free water contamination D
 model fitting procedures. All implementations are made in Python based on a
 reviewed description of the Hoy and collegues original article. For speed optimization,
 all necessary standard DT processing steps are using the previously optimized functions
-of the software project Diffusion Imaging (Dipy, http://nipy.org/dipy/,  [@Garyfallidis2012-zp]) 
+of the software project Diffusion Imaging (Dipy, http://nipy.org/dipy/,  [@Garyfallidis2012-zp])
 and the optimization algorithms provided by the open-source software for mathematics, science,
 and engineering (Scipy, http://scipy.org/).
 
@@ -99,7 +99,7 @@ procedure, as suggested by Hoy and Colleges [@Hoy2014-lk,], the model parameters
 guess were adjusted to the values estimated from the WLS approach. For computing
 speed optiminzation, instead of using the modified Newton's method approach
 proposed in the original article, the non-linear covergence was followed using
-Scipy's wrapped modified levenberg-marquardt algorithm available (function 
+Scipy's wrapped modified levenberg-marquardt algorithm available (function
 scipy.optimize.leastsq of Scipy http://scipy.org/). To constrain the
 models parameters to plausibe range, the free water volume fraction $f$ was
 converted to $f_t = \arcsin (2f-1) + \pi / 2$. To compare the robustness of the
@@ -124,7 +124,7 @@ for more details).
 **Removing problematic estimates**
 
 For cases that the ground truth free water volume fraction is one (i.e. voxels
-containing only free water), the tissue's diffusion tensor componet can erratically 
+containing only free water), the tissue's diffusion tensor componet can erratically
 overfit the free water diffusion signal and erratically induce estimates of
 the water volume fraction near to one. To remove this problematic cases, for all voxels with
 standard DTI's mean diffusivity values larger than 2.7 mm^{2}.s^{-1}, the free
@@ -187,7 +187,7 @@ signal to noise rations used on the original article, ours results confirmed
 that the free water elimination DTI model is able to remove confounding effects
 of fast diffusion for typical FA values of the brain white matter. Similar to
 what was reported by Hoy and Colleagues, the proposed procedures seem to produce
-biased values of FA for free water volume fractions near to one. Nevertheless, 
+biased values of FA for free water volume fractions near to one. Nevertheless,
 our results confirm that these problematic cases correspond to regions that are not
 of interest in neuroimaging analysis (voxels associated with cerebral ventricles)
 and might be removed by excluding voxels with high volume free water volume
