@@ -5,6 +5,8 @@ Author:
     affiliation: 1
   - name: Ariel Rokem
     affiliation: 2
+  - name: Marta Morgado Correia
+    affiliation: 1
 Address:
   - code:    1
     address: MRC, Cognition and Brain Sciences Unit, Cambridge, Cambridgeshire, UK
@@ -61,9 +63,9 @@ to different free water contamination degrees, the authors mentioned that their
 original algorithms were "implemented by a group member with no formal programming
 training and without optimization for speed" [@Hoy2014-lk,]. In this work, we provide
 the first open source reference implementation of the free water contamination DTI
-model fitting procedures. All implementations are made in Python based on a
-reviewed description of the Hoy and collegues original article. For speed optimization,
-all necessary standard DT processing steps are using the previously optimized functions
+model fitting procedures. All implementations are made in Python based on the
+descriptions of the Hoy and collegues original article. For speed optimization,
+all necessary standard DT processing steps are done using previously optimized functions
 of the software project Diffusion Imaging (Dipy, http://nipy.org/dipy/,  [@Garyfallidis2012-zp])
 and the optimization algorithms provided by the open-source software for mathematics, science,
 and engineering (Scipy, http://scipy.org/).
@@ -72,8 +74,8 @@ and engineering (Scipy, http://scipy.org/).
 
 ## Procedures Implementation
 
-Since no source implementation was previously provided by Hoy and
-colleagues, all formulas of the two fitting procedures on the original paper were
+Since no source implementation was previously provided by Hoy and colleagues,
+all formulas of the two fitting procedures on the original paper were
 carefully review.
 
 **The Weighted-Linear Least Square Solution (WLS).** Two typos were found
@@ -94,12 +96,12 @@ on the second and third iteration to refine the precision, the water
 contamination volume fraction were resampled with steps sizes of 0.1 and 0.01
 instead of the step sizes of 0.05 and 0.005 suggested by Hoy and Colleges.
 
-**Non-Linear Least Square Solution (NLS)**. For the non-linear convergence
-procedure, as suggested by Hoy and Colleges [@Hoy2014-lk,], the model parameters initial
-guess were adjusted to the values estimated from the WLS approach. For computing
-speed optiminzation, instead of using the modified Newton's method approach
-proposed in the original article, the non-linear covergence was followed using
-Scipy's wrapped modified levenberg-marquardt algorithm available (function
+**Non-Linear Least Square Solution (NLS)**. As suggested by Hoy and Colleges
+[@Hoy2014-lk,], the model parameters initial guess for the non-linear convergence
+procedure were set to the values estimated from the WLS approach. For computing
+speed optiminzation, instead of using the modified Newton's method algorithm
+proposed in the original article, the non-linear covergence was done using
+the Scipy's wrapped modified levenberg-marquardt algorithm available (function
 scipy.optimize.leastsq of Scipy http://scipy.org/). To constrain the
 models parameters to plausibe range, the free water volume fraction $f$ was
 converted to $f_t = \arcsin (2f-1) + \pi / 2$. To compare the robustness of the
@@ -107,19 +109,19 @@ techniques with and without this constrains, the free water volume fraction
 transformation was implemented as an optional function feature. In addition to
 the scipy.optimize.leastsq, the more recent Scipy's optimization function
 scipy.optimize.least_square (available in Scipy's version 0.17) was also tested.
-This allows solving the non-linear problems directly bounded with predefined
-constrains similar to what is done on the original article, however for the
-free water elimination model this did not show to overcome the robustness
-and time speed of the procedure scipy.optimize.leastsq when the proposed f
-transformation was used (see supplementary_notebook_1.ipynb for more details).
-To speed the non-linear performance, the free water elimination DTI model jacobian
-was analytically derived and incorporated to the non-linear procedure (for the details
+This allows solving the non-linear problem directly bounded with predefined
+constrains in a similar fation to what is done on the original article, however
+our experiment showed that this procedure does not overcome the preformance of
+scipy.optimize.leastsq procedure and showed require more computing time
+(see supplementary_notebook_1.ipynb for more details). To speed the non-linear
+performance, the free water elimination DTI model jacobian was analytically
+derived and incorporated to the non-linear procedure (for the details
 of the jacobian derivation see supplementary_notebook_2.ipynb). As an expansion of
 the work done by Hoy and colleagues, we also allow users to use of Cholesky
 decomposition of the diffusion tensor to insure that this is a positive defined tensor
 [@Koay2006-zo]. Due to the increase of the model's mathematical complexity, the
-Cholesky decomposition is not used by default (see supplementary_notebook_1.ipynb
-for more details).
+Cholesky decomposition is not used by default and it is not compatible with the
+analytical jacobian derivation.
 
 **Removing problematic estimates**
 
@@ -138,22 +140,23 @@ procedures.
 free water elimination fitting procedures requires modules from the open source
 software project Dipy  [@Garyfallidis2012-zp], since these contain all necessary
 standard diffusion tensor processing functions. Although, the core algorithms of
-the free water elimination procedures were implemented separately from Dipy,
-in the near future, they will be incorporated as a Dipy's model reconstruction
-module (https://github.com/nipy/dipy/pull/835). In addition, our functions also
-requires the python pakage NumPy (http://www.numpy.org/).
+the free water elimination procedures are here implemented separately from Dipy,
+in the near future, a version of these will be incorporated as a Dipy's model
+reconstruction module (https://github.com/nipy/dipy/pull/835). In addition, the
+implemented procedures also requires the python pakage NumPy (http://www.numpy.org/).
 
-### 2.2 Simulations
+## Simulations
 In this study, the Hoy and colleagues simulations for the methods optimal
-acquisition parameters are reproduces (i.e. simulations along 32 diffusion
-direction for b-values 500 and 1500 s.mm^{-2} and with six b-value=0 images).
+acquisition parameters are reproduced (i.e. simulations along 32 diffusion
+direction for b-values 500 and 1500 s.mm^{-2} and with six b-value=0 images
+and which correspond to the results reported in Fig.4 of the original article).
 The monte carlos simulations are performed using the multi-tensor simulation
 module available in Dipy. As the original article, fitting procedures are
 tested for voxels with 5 different FA values and with constant diffusion trace
 of $2.4 \times 10^{-3} mm^{2}.s^{-1}$. The eigenvalues used for the 5 FA levels
 are reported in @tbl:table.
 
-Table: Eigenvalues values used for the simulations of the study {#tbl:table}
+Table: Eigenvalues values used for the simulations {#tbl:table}
 
 FA            0                      0.11                   0.22                   0.3                    0.71
 ------------ ---------------------- ---------------------- ---------------------- ---------------------- ----------------------
@@ -169,13 +172,18 @@ different diffusion tensor orientation. Simulations for each diffusion tensor
 orientation were repeated 100 times making a total of 12000 simulation
 iterations for each FA and f-value pair.
 
-## Real data testing
+## In vivo data
+
+
 
 # Results
 
-A reference to figure @fig:logo.
+A reference to figure @fig:simulations.
 
-![Figure caption](rescience-logo.pdf) {#fig:logo}
+![Figure caption](fwdti_simulations.png) {#fig:simulations}
+
+![Figure caption](In_vivo_free_water_DTI_and_standard_DTI_measures.png) {#fig:invivo}
+
 
 # Conclusion
 
