@@ -126,36 +126,50 @@
 }
 
 
-@ARTICLE{Garyfallidis2012-zp,
-  title       = "{QuickBundles}, a Method for Tractography Simplification",
-  author      = "Garyfallidis, Eleftherios and Brett, Matthew and Correia,
-                 Marta Morgado and Williams, Guy B and Nimmo-Smith, Ian",
-  affiliation = "Wolfson College, University of Cambridge Cambridge, UK ;
-                 Medical Research Council Cognition and Brain Sciences Unit
-                 Cambridge, UK.",
-  abstract    = "Diffusion MR data sets produce large numbers of streamlines
-                 which are hard to visualize, interact with, and interpret in a
-                 clinically acceptable time scale, despite numerous proposed
-                 approaches. As a solution we present a simple, compact,
-                 tailor-made clustering algorithm, QuickBundles (QB), that
-                 overcomes the complexity of these large data sets and provides
-                 informative clusters in seconds. Each QB cluster can be
-                 represented by a single centroid streamline; collectively
-                 these centroid streamlines can be taken as an effective
-                 representation of the tractography. We provide a number of
-                 tests to show how the QB reduction has good consistency and
-                 robustness. We show how the QB reduction can help in the
-                 search for similarities across several subjects.",
-  journal     = "Front. Neurosci.",
-  volume      =  6,
-  pages       = "175",
-  month       =  "11~" # dec,
-  year        =  2012,
-  keywords    = "DTI; clustering algorithms; diffusion MRI; dimensionality
-                 reduction; fiber clustering; tractography; white matter
-                 segmentation"
+@ARTICLE{Garyfallidis2014-zo,
+  title    = "Dipy, a library for the analysis of diffusion {MRI} data",
+  author   = "Garyfallidis, Eleftherios and Brett, Matthew and Amirbekian,
+              Bagrat and Rokem, Ariel and van der Walt, Stefan and Descoteaux,
+              Maxime and Nimmo-Smith, Ian and {Dipy Contributors}",
+  abstract = "Diffusion Imaging in Python (Dipy) is a free and open source
+              software project for the analysis of data from diffusion magnetic
+              resonance imaging (dMRI) experiments. dMRI is an application of
+              MRI that can be used to measure structural features of brain
+              white matter. Many methods have been developed to use dMRI data
+              to model the local configuration of white matter nerve fiber
+              bundles and infer the trajectory of bundles connecting different
+              parts of the brain. Dipy gathers implementations of many
+              different methods in dMRI, including: diffusion signal
+              pre-processing; reconstruction of diffusion distributions in
+              individual voxels; fiber tractography and fiber track
+              post-processing, analysis and visualization. Dipy aims to provide
+              transparent implementations for all the different steps of dMRI
+              analysis with a uniform programming interface. We have
+              implemented classical signal reconstruction techniques, such as
+              the diffusion tensor model and deterministic fiber tractography.
+              In addition, cutting edge novel reconstruction techniques are
+              implemented, such as constrained spherical deconvolution and
+              diffusion spectrum imaging (DSI) with deconvolution, as well as
+              methods for probabilistic tracking and original methods for
+              tractography clustering. Many additional utility functions are
+              provided to calculate various statistics, informative
+              visualizations, as well as file-handling routines to assist in
+              the development and use of novel techniques. In contrast to many
+              other scientific software projects, Dipy is not being developed
+              by a single research group. Rather, it is an open project that
+              encourages contributions from any scientist/developer through
+              GitHub and open discussions on the project mailing list.
+              Consequently, Dipy today has an international team of
+              contributors, spanning seven different academic institutions in
+              five countries and three continents, which is still growing.",
+  journal  = "Front. Neuroinform.",
+  volume   =  8,
+  pages    = "8",
+  month    =  "21~" # feb,
+  year     =  2014,
+  keywords = "DSI; DTI; HARDI; Python; dMRI; diffusion MRI; free open source
+              software; tractography"
 }
-
 
 
 @ARTICLE{Koay2006-zo,
@@ -205,4 +219,41 @@
   number    =  7,
   pages     = "803--820",
   year      =  2010
+}
+
+
+@ARTICLE{Beaulieu2002-tl,
+  title     = "The basis of anisotropic water diffusion in the nervous system
+               -- a technical review",
+  author    = "Beaulieu, Christian",
+  abstract  = "Anisotropic water diffusion in neural fibres such as nerve,
+               white matter in spinal cord, or white matter in brain forms the
+               basis for the utilization of diffusion tensor imaging (DTI) to
+               track fibre pathways. The fact that water diffusion is sensitive
+               to the underlying tissue microstructure provides a unique method
+               of assessing the orientation and integrity of these neural
+               fibres, which may be useful in assessing a number of
+               neurological disorders. The purpose of this review is to
+               characterize the relationship of nuclear magnetic resonance
+               measurements of water diffusion and its anisotropy (i.e.
+               directional dependence) with the underlying microstructure of
+               neural fibres. The emphasis of the review will be on model
+               neurological systems both in vitro and in vivo. A systematic
+               discussion of the possible sources of anisotropy and their
+               evaluation will be presented followed by an overview of various
+               studies of restricted diffusion and compartmentation as they
+               relate to anisotropy. Pertinent pathological models,
+               developmental studies and theoretical analyses provide further
+               insight into the basis of anisotropic diffusion and its
+               potential utility in the nervous system. Copyright \copyright{}
+               2002 John Wiley \& Sons, Ltd.",
+  journal   = "NMR Biomed.",
+  publisher = "John Wiley \& Sons, Ltd.",
+  volume    =  15,
+  number    = "7-8",
+  pages     = "435--455",
+  month     =  "1~" # nov,
+  year      =  2002,
+  keywords  = "diffusion; anisotropy; nerve; white matter; spinal cord; water;
+               MRI; DTI"
 }
