@@ -177,7 +177,15 @@ iterations for each FA and f-value pair.
 
 ## In vivo data
 
-
+Similar to the original article, the procedures are also tested on in vivo human brain data.
+This dataset was kindly supplied by Valabregue Romain, CENIR, ICM, Paris
+(https://digital.lib.washington.edu/researchworks/handle/1773/33311) and can be automatically
+downloaded Dipy's functions. The original dataset consisted of 74 volumes of images acquired for a
+b-value of 0 s.mm^{-2} and 578 volumes of images acquired along 16 diffusion gradient directions
+for b-values of 200 and 400 s.mm^{-2} and along 182 diffusion gradient directions for b-values
+of 1000, 2000 and 3000 s.mm^{-2}. In this study, only the data for b-values up to 2000 $s.mm^{-2}
+are used to decrease the influence of non-Gaussian diffusion effects of the tisse which are not
+taken into account by the free water elimination model _[Hoy2014].
 
 # Results
 
