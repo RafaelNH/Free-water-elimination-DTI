@@ -100,6 +100,10 @@ on the second and third iteration that are used to refine the precision, the wat
 contamination volume fraction were resampled with steps sizes of 0.1 and 0.01
 instead of the step sizes of 0.05 and 0.005 suggested by Hoy and Colleges.
 
+Similar to the original article [@Hoy2014-lk,], the WLS procedure is only used here
+to obtain the free water elimination model parameters intial gues for the 
+non-linear convergence procedure (see below).
+
 **Non-Linear Least Square Solution (NLS)**. As suggested by Hoy and Colleges
 [@Hoy2014-lk,], the model parameters initial guess for the non-linear convergence
 procedure were set to the values estimated from the WLS approach. To improve the speed of computation,
@@ -173,36 +177,43 @@ procedure, Rician noise with signal-to-noise ration (SNR) of 40 relative to the 
 used. For each FA and f-value pair, simulations were performed for 120
 different diffusion tensor orientation. Simulations for each diffusion tensor
 orientation were repeated 100 times making a total of 12000 simulation
-iterations for each FA and f-value pair.
+iterations for each FA and f-value pair. 
 
 ## In vivo data
 
 Similar to the original article, the procedures are also tested on in vivo human brain data.
-This dataset was kindly supplied by Valabregue Romain, CENIR, ICM, Paris
+This dataset used here was kindly supplied by Valabregue Romain, CENIR, ICM, Paris
 (https://digital.lib.washington.edu/researchworks/handle/1773/33311) and can be automatically
 downloaded Dipy's functions. The original dataset consisted of 74 volumes of images acquired for a
 b-value of 0 s.mm^{-2} and 578 volumes of images acquired along 16 diffusion gradient directions
 for b-values of 200 and 400 s.mm^{-2} and along 182 diffusion gradient directions for b-values
 of 1000, 2000 and 3000 s.mm^{-2}. In this study, only the data for b-values up to 2000 $s.mm^{-2}
 are used to decrease the influence of non-Gaussian diffusion effects of the tisse which are not
-taken into account by the free water elimination model _[Hoy2014].
+taken into account by the free water elimination model _[Hoy2014]. In addition to the free water
+elimination model, we also process the data using the standard DTI tensor model for comparison purposes
+(this model is already implemented in Dipy).
 
 # Results
 
 The results from the Monte Carlo simulations are shown in @fig:simulations. Similar to what is reported
 in the original article, simulations show that FA values estimated using the free water elimination model
 match the ground truth tissue FA values for free water volume fractions $f$ ranging around 0 to 0.7 (upper panel of
-@fig:simulations). However, for higher volume fractions, FA seem to be overestimated. This bias seem
+@fig:simulations). However, FA values seem to be overestimated for higher volume fractions. This bias seem
 to be more prominent for lower FA values in which overestimations are visible from lower free water volume
 fractions. The lower panels of @fig:simulations suggest that the free water elimination model produce
 accurate free water volume fraction for the full range of volume fraction ground truth values. All observations
-done here are consistent to Fig.5 of the original article. 
+done here are consistent to Fig.5 of the original article.
 
-![Figure caption](fwdti_simulations.png) {#fig:simulations}
+![Fig.1 - Fractional Anisotropy (FA) and Mean diffusivity (MD) estimates obtain from the Monte Carlo simulation 
+using the free water elimination fitting procedures. The upper panel show the FA median and intra-quartil ranges
+for the 5 different FA ground truth levels and plotted as function of the ground truth water volume fraction, while the
+lower panels show the estimated volume fraction $f$ median and intra-quartil ranges as function of its ground truth values
+for the higher and lower FA simulated level. This figure reproduces Fig.4 of the original article](fwdti_simulations.png) {#fig:simulations}
 
+In vivo tensor statistics obtain from the free water elimination and standard DTI models are
+are shown in {#fig:invivo}. Similar to Fig.7 of the original article, FA values from 
 
-
-![Figure caption](In_vivo_free_water_DTI_and_standard_DTI_measures.png) {#fig:invivo}
+![Fig. 2 - ](In_vivo_free_water_DTI_and_standard_DTI_measures.png) {#fig:invivo}
 
 
 # Conclusion
