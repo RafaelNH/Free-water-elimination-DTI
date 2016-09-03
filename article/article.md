@@ -152,7 +152,7 @@ which is also a dependency of both Scipy and Dipy.
 ## Simulations
 In their original study, Hoy and colleagues simulated a measurement along 32 diffusion
 direction with diffusion weighting b-values of 500 and 1500 s.mm^{-2} and with six b-value=0 images.
-These simulations correspond to the results reported in Fig.4 of the original article.
+These simulations correspond to the results reported in Fig.5 of the original article.
 We conducted Monte Carlo simulations using the multi-tensor simulation
 module available in Dipy and using identical simulated measurement acquisition parameters.
 As in the original article, fitting procedures are tested for voxels with 5 different FA values
@@ -189,9 +189,18 @@ taken into account by the free water elimination model _[Hoy2014].
 
 # Results
 
-A reference to figure @fig:simulations.
+The results from the Monte Carlo simulations are shown in @fig:simulations. Similar to what is reported
+in the original article, simulations show that FA values estimated using the free water elimination model
+match the ground truth tissue FA values for free water volume fractions $f$ ranging around 0 to 0.7 (upper panel of
+@fig:simulations). However, for higher volume fractions, FA seem to be overestimated. This bias seem
+to be more prominent for lower FA values in which overestimations are visible from lower free water volume
+fractions. The lower panels of @fig:simulations suggest that the free water elimination model produce
+accurate free water volume fraction for the full range of volume fraction ground truth values. All observations
+done here are consistent to Fig.5 of the original article. 
 
 ![Figure caption](fwdti_simulations.png) {#fig:simulations}
+
+
 
 ![Figure caption](In_vivo_free_water_DTI_and_standard_DTI_measures.png) {#fig:invivo}
 
