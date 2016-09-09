@@ -16,10 +16,10 @@
 
 import numpy as np
 
-from dipy.reconst.dti import (decompose_tensor, from_lower_triangular,
-                              lower_triangular, mean_diffusivity)
+from dipy.reconst.dti import (design_matrix, decompose_tensor,
+                              from_lower_triangular, lower_triangular)
 from dipy.reconst.vec_val_sum import vec_val_vect
-from dipy.reconst.dti import wls_fit_tensor as dti_wls_fit
+from dipy.core.ndindex import ndindex
 
 import scipy.optimize as opt
 
@@ -27,10 +27,11 @@ import scipy.optimize as opt
 # Weigthed linear least squares fit procedure
 # -------------------------------------------------------------------------
 
-def _wls_iter(design_matrix, sig, min_diffusivity, min_signal, Diso=3e-3,
-              piterations=3, S0=None):
-    """ Helper function used by wls_fit_tensor - Applies WLS fit of the
-    water free elimination model to single voxel signals.
+
+def wls_iter(design_matrix, sig, S0, Diso=3e-3, mdreg=2.7e-3,
+             min_signal=1.0e-6, piterations=3):
+    """ Applies weighted linear least squares fit of the water free elimination
+    model to single voxel signals.
 
     Parameters
     ----------
@@ -39,18 +40,22 @@ def _wls_iter(design_matrix, sig, min_diffusivity, min_signal, Diso=3e-3,
         coefficients.
     sig : array (g, )
         Diffusion-weighted signal for a single voxel data.
-    min_diffusivity : float
-        Because negative eigenvalues are not physical and small eigenvalues,
-        much smaller than the diffusion weighting, cause quite a lot of noise
-        in metrics such as fa, diffusivity values smaller than
-        `min_diffusivity` are replaced with `min_diffusivity`.
-    min_signal : float
-        The minimum signal value. Needs to be a strictly positive
-        number. Default: minimal signal in the data provided to `fit`.
+    S0 : float
+        Non diffusion weighted signal (i.e. signal for b-value=0).
     Diso : float, optional
         Value of the free water isotropic diffusion. Default is set to 3e-3
         $mm^{2}.s^{-1}$. Please ajust this value if you are assuming different
         units of diffusion.
+     mdreg : float, optimal
+        DTI's mean diffusivity regularization threshold. If standard DTI
+        diffusion tensor's mean diffusivity is almost near the free water
+        diffusion value, the diffusion signal is assumed to be only free water
+        diffusion (i.e. volume fraction will be set to 1 and tissue's diffusion
+        parameters are set to zero). Default md_reg is 2.7e-3 $mm^{2}.s^{-1}$
+        (corresponding to 90% of the free water diffusion value).
+    min_signal : float
+        The minimum signal value. Needs to be a strictly positive
+        number. Default: minimal signal in the data provided to `fit`.
     piterations : inter, optional
         Number of iterations used to refine the precision of f. Default is set
         to 3 corresponding to a precision of 0.01.
@@ -63,21 +68,11 @@ def _wls_iter(design_matrix, sig, min_diffusivity, min_signal, Diso=3e-3,
         2) Three lines of the eigenvector matrix each containing the
            first, second and third coordinates of the eigenvector
         3) The volume fraction of the free water compartment
-        4) The estimate of the non diffusion-weighted signal S0
-    fw_params : ndarray (13,)
-        Array containing in the last dimention the free water model parameters
-        in the following order:
-            1) Three diffusion tensor's eigenvalues
-            2) Three lines of the eigenvector matrix each containing the
-               first, second and third coordinates of the eigenvector
-            3) The volume fraction of the free water compartment
-    S0 : float
-        Final estimate of the non diffusion-weighted signal S0.
     """
     W = design_matrix
 
     # DTI ordinary linear least square solution
-    log_s = np.log(sig)
+    log_s = np.log(np.maximum(sig, min_signal))
 
     # Define weights
     S2 = np.diag(sig**2)
@@ -88,16 +83,17 @@ def _wls_iter(design_matrix, sig, min_diffusivity, min_signal, Diso=3e-3,
     invWTS2W_WTS2 = np.dot(inv_WT_S2_W, WTS2)
     params = np.dot(invWTS2W_WTS2, log_s)
 
-    # General free-water signal contribution
-    fwsig = np.exp(np.dot(design_matrix,
-                          np.array([Diso, 0, Diso, 0, 0, Diso, 0])))
+    md = (params[0] + params[2] + params[5]) / 3
+    # Process voxel if it has significant signal from tissue
+    if md < mdreg and np.mean(sig) > min_signal:
+        # General free-water signal contribution
+        fwsig = np.exp(np.dot(design_matrix,
+                              np.array([Diso, 0, Diso, 0, 0, Diso, 0])))
 
-    df = 1  # initialize precision
-    flow = 0  # lower f evaluated
-    fhig = 1  # higher f evaluated
-    ns = 9  # initial number of samples per iteration
-    nvol = len(sig)
-    if S0 is not None:
+        df = 1  # initialize precision
+        flow = 0  # lower f evaluated
+        fhig = 1  # higher f evaluated
+        ns = 9  # initial number of samples per iteration
         for p in range(piterations):
             df = df * 0.1
             fs = np.linspace(flow+df, fhig-df, num=ns)  # sampling f
@@ -112,7 +108,6 @@ def _wls_iter(design_matrix, sig, min_diffusivity, min_signal, Diso=3e-3,
             SA[SA <= 0] = min_signal
             y = np.log(SA / (1-FS))
             all_new_params = np.dot(invWTS2W_WTS2, y)
-
             # Select params for lower F2
             SIpred = (1-FS)*np.exp(np.dot(W, all_new_params)) + FS*S0*SFW.T
             F2 = np.sum(np.square(SI - SIpred), axis=0)
@@ -122,59 +117,40 @@ def _wls_iter(design_matrix, sig, min_diffusivity, min_signal, Diso=3e-3,
             flow = f - df  # refining precision
             fhig = f + df
             ns = 19
+
+        evals, evecs = decompose_tensor(from_lower_triangular(params))
+        fw_params = np.concatenate((evals, evecs[0], evecs[1], evecs[2],
+                                    np.array([f])), axis=0)
     else:
-        for p in range(piterations):
-            df = df * 0.1
-            fs = np.linspace(flow+df, fhig-df, num=ns)  # sampling f
-            SFW = np.array([fwsig, ]*ns)  # repeat contributions for all values
-            FS, SI = np.meshgrid(fs, sig)
-            S0 = np.exp(-params[6])  # S0 is now taken as a model parameter
-            SA = SI - FS*S0*SFW.T
-            SA[SA <= 0] = min_signal  # Overcaming issue of negative SA
-            y = np.log(SA / (1-FS))
-            all_new_params = np.dot(invWTS2W_WTS2, y)
+        fw_params = np.zeros(13)
+        if md > mdreg:
+            fw_params[12] = 1.0
 
-            # Select params for lower F2
-            S0r = np.exp(-np.array([all_new_params[6], ]*nvol))
-            SIpred = (1-FS)*np.exp(np.dot(W, all_new_params)) + FS*S0r*SFW.T
-            F2 = np.sum(np.square(SI - SIpred), axis=0)
-            Mind = np.argmin(F2)
-            params = all_new_params[:, Mind]
-            f = fs[Mind]  # Updated f
-            flow = f - df  # refining precision
-            fhig = f + df
-            ns = 19
-        S0 = np.exp(-params[6])
-
-    evals, evecs = decompose_tensor(from_lower_triangular(params),
-                                    min_diffusivity=min_diffusivity)
-    fw_params = np.concatenate((evals, evecs[0], evecs[1], evecs[2],
-                                np.array([f])), axis=0)
-
-    return fw_params, S0
+    return fw_params
 
 
-def wls_fit_tensor(design_matrix, data, S0=None, Diso=3e-3, piterations=3,
-                   mdreg=2.7e-3):
+def wls_fit_tensor(gtab, data, Diso=3e-3, mask=None, min_signal=1.0e-6,
+                   piterations=3, mdreg=2.7e-3):
     r""" Computes weighted least squares (WLS) fit to calculate self-diffusion
     tensor using a linear regression model [1]_.
 
     Parameters
     ----------
-    design_matrix : array (g, 7)
-        Design matrix holding the covariants used to solve for the regression
-        coefficients.
-    data : array ([X, Y, Z, ...], g)
+    gtab : a GradientTable class instance
+        The gradient table containing diffusion acquisition parameters.
+    data : ndarray ([X, Y, Z, ...], g)
         Data or response variables holding the data. Note that the last
         dimension should contain the data. It makes no copies of data.
-    S0 : array ([X, Y, Z]), optional
-        Non diffusion weighted signal (i.e. signal for b-value=0). If not
-        given, S0 will be taken as a model parameter (which is likely to
-        decrease methods robustness).
     Diso : float, optional
         Value of the free water isotropic diffusion. Default is set to 3e-3
         $mm^{2}.s^{-1}$. Please ajust this value if you are assuming different
         units of diffusion.
+    mask : array, optional
+        A boolean array used to mark the coordinates in the data that should
+        be analyzed that has the shape data.shape[:-1]
+    min_signal : float
+        The minimum signal value. Needs to be a strictly positive
+        number. Default: 1.0e-6.
     piterations : inter, optional
         Number of iterations used to refine the precision of f. Default is set
         to 3 corresponding to a precision of 0.01.
@@ -194,70 +170,37 @@ def wls_fit_tensor(design_matrix, data, S0=None, Diso=3e-3, piterations=3,
             1) Three diffusion tensor's eigenvalues
             2) Three lines of the eigenvector matrix each containing the
                first, second and third coordinates of the eigenvector
-            3) The volume fraction of the free water compartment
-    S0 : ndarray (x, y, z)
-        Final estimate of the non diffusion-weighted signal S0.
+            3) The volume fraction of the free water compartment.
 
     References
     ----------
-    .. [1] Chung, SW., Lu, Y., Henry, R.G., 2006. Comparison of bootstrap
-       approaches for estimation of uncertainties of DTI parameters.
-       NeuroImage 33, 531-541.
+    .. [1] Hoy, A.R., Koay, C.G., Kecskemeti, S.R., Alexander, A.L., 2014.
+           Optimization of a free water elimination two-compartmental model
+           for diffusion tensor imaging. NeuroImage 103, 323-333.
+           doi: 10.1016/j.neuroimage.2014.09.053
     """
-    tol = 1e-6
+    fw_params = np.zeros(data.shape[:-1] + (13,))
+    W = design_matrix(gtab)
 
-    # preparing data and initializing parameters
-    data = np.asarray(data)
-    data_flat = np.reshape(data, (-1, data.shape[-1]))
-    params_out = np.zeros((len(data_flat), 13))
-
-    # inverting design matrix and defining minimun diffusion aloud
-    min_diffusivity = tol / -design_matrix.min()
-
-    # Computing WLS DTI solution for MD regularization
-    dti_params = dti_wls_fit(design_matrix, data_flat)
-    md = mean_diffusivity(dti_params[..., :3])
-    cond = md > mdreg  # removal condition
-    params_cond = params_out[~cond, :]
-    data_cond = data_flat[~cond, ]
-
-    # looping WLS solution on all data voxels
-    if S0 is None:
-        S0out = np.zeros(len(data_flat))
-        S0cond = np.zeros(len(data_cond))
-        for vox in range(len(data_cond)):
-            params_cond[vox], S0cond[vox] = _wls_iter(design_matrix,
-                                                      data_cond[vox],
-                                                      min_diffusivity,
-                                                      min_signal=tol,
-                                                      Diso=Diso,
-                                                      piterations=piterations)
+    # Prepare mask
+    if mask is None:
+        mask = np.ones(data.shape[:-1], dtype=bool)
     else:
-        S0out = S0.copy()
-        S0out = S0out.ravel()
-        S0cond = S0out[~cond]
-        for vox in range(len(data_cond)):
-            params_cond[vox], S0cond[vox] = _wls_iter(design_matrix,
-                                                      data_cond[vox],
-                                                      min_diffusivity,
-                                                      min_signal=tol,
-                                                      Diso=Diso,
-                                                      piterations=piterations,
-                                                      S0=S0cond[vox])
+        if mask.shape != data.shape[:-1]:
+            raise ValueError("Mask is not the same shape as data.")
+        mask = np.array(mask, dtype=bool, copy=False)
 
-    # Reshape data according to the input data shape
-    params_out[~cond, :] = params_cond
-    params_out[cond, 12] = 1  # Only free water
-    params_out = params_out.reshape((data.shape[:-1]) + (13,))
-    S0out[~cond] = S0cond
-    S0out[cond] = np.mean(data_flat[cond, :] /
-                          np.exp(np.dot(design_matrix[..., :6],
-                                        np.array([Diso, 0, Diso,
-                                                  0, 0, Diso]))),
-                          -1)  # Only free water
-    S0out = S0out.reshape(data.shape[:-1])
-    return params_out, S0out
+    # Prepare S0
+    S0 = np.mean(data[:, :, :, gtab.b0s_mask], axis=-1)
 
+    index = ndindex(mask.shape)
+    for v in index:
+        if mask[v]:
+            params = wls_iter(W, data[v], S0[v], min_signal=min_signal,
+                              Diso=3e-3, piterations=piterations, mdreg=mdreg)
+            fw_params[v] = params
+
+    return fw_params
 
 # -------------------------------------------------------------------------
 # non-linear least squares fit procedure
@@ -265,8 +208,7 @@ def wls_fit_tensor(design_matrix, data, S0=None, Diso=3e-3, piterations=3,
 
 
 def _nls_err_func(tensor_elements, design_matrix, data, Diso=3e-3,
-                  weighting=None, sigma=None, cholesky=False,
-                  f_transform=False):
+                  cholesky=False, f_transform=False):
     """ Error function for the non-linear least-squares fit of the tensor water
     elimination model.
 
@@ -287,16 +229,6 @@ def _nls_err_func(tensor_elements, design_matrix, data, Diso=3e-3,
         Value of the free water isotropic diffusion. Default is set to 3e-3
         $mm^{2}.s^{-1}$. Please ajust this value if you are assuming different
         units of diffusion.
-    weighting : str (optional).
-         Whether to use the Geman McClure weighting criterion (see [1]_
-         for details)
-    sigma : float or float array (optional)
-        If 'sigma' weighting is used, we will weight the error function
-        according to the background noise estimated either in aggregate over
-        all directions (when a float is provided), or to an estimate of the
-        noise in each diffusion-weighting direction (if an array is
-        provided). If 'gmm', the Geman-Mclure M-estimator is used for
-        weighting.
     cholesky : bool, optional
         If true, the diffusion tensor elements were decomposed using cholesky
         decomposition. See fwdti.nls_fit_tensor
@@ -322,41 +254,11 @@ def _nls_err_func(tensor_elements, design_matrix, data, Diso=3e-3,
                           np.array([Diso, 0, Diso, 0, 0, Diso, tensor[6]])))
 
     # Compute the residuals
-    residuals = data - y
-
-    # If we don't want to weight the residuals, we are basically done:
-    if weighting is None:
-        # And we return the SSE:
-        return residuals
-    se = residuals ** 2
-    # If the user provided a sigma (e.g 1.5267 * std(background_noise), as
-    # suggested by Chang et al.) we will use it:
-    if weighting == 'sigma':
-        if sigma is None:
-            e_s = "Must provide sigma value as input to use this weighting"
-            e_s += " method"
-            raise ValueError(e_s)
-        w = 1/(sigma**2)
-
-    elif weighting == 'gmm':
-        # We use the Geman McClure M-estimator to compute the weights on the
-        # residuals:
-        C = 1.4826 * np.median(np.abs(residuals - np.median(residuals)))
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
-            w = 1/(se + C**2)
-            # The weights are normalized to the mean weight (see p. 1089):
-            w = w/np.mean(w)
-
-    # Return the weighted residuals:
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore")
-        return np.sqrt(w * se)
+    return data - y
 
 
 def _nls_jacobian_func(tensor_elements, design_matrix, data, Diso=3e-3,
-                       weighting=None, sigma=None, cholesky=False,
-                       f_transform=False):
+                       cholesky=False, f_transform=False):
     """The Jacobian is the first derivative of the least squares error
     function.
 
@@ -399,43 +301,35 @@ def _nls_jacobian_func(tensor_elements, design_matrix, data, Diso=3e-3,
     return np.concatenate((T - S, df[:, None]), axis=1)
 
 
-def nls_fit_tensor(design_matrix, data, fw_params=None, S0=None, Diso=3e-3,
-                   weighting=None, sigma=None, cholesky=False,
-                   f_transform=True, jac=False, mdreg=2.7e-3):
-    """
-    Fit the water elimination tensor model using the non-linear least-squares.
+def nls_iter(design_matrix, sig, S0, Diso=3e-3, mdreg=2.7e-3,
+             min_signal=1.0e-6, cholesky=False, f_transform=True,
+             jac=False):
+    """ Applies non linear least squares fit of the water free elimination
+    model to single voxel signals.
 
     Parameters
     ----------
     design_matrix : array (g, 7)
         Design matrix holding the covariants used to solve for the regression
         coefficients.
-    data : ndarray ([X, Y, Z, ...], g)
-        Data or response variables holding the data. Note that the last
-        dimension should contain the data. It makes no copies of data.
-    fw_params : ndarray ([X, Y, Z, ...], 13), optional
-        A first model parameters guess (3 eigenvalues, 3 coordinates
-        of 3 eigenvalues, and the volume fraction of the free water
-        compartment). If the initial fw_paramters are not given, the function
-        will use free water DTI WLS solution. Default: None
-    S0 : ndarray ([X, Y, Z])
-        A first guess of the non-diffusion signal S0. If S0 and fw_params are
-        not given, an initial guess of the S0 will be extracted from the free
-        water WLS solution. If only S0 is not given, the function will use the
-        S0 estimate from standard DTI WLS. Default: None
+    sig : array (g, )
+        Diffusion-weighted signal for a single voxel data.
+    S0 : float
+        Non diffusion weighted signal (i.e. signal for b-value=0).
     Diso : float, optional
         Value of the free water isotropic diffusion. Default is set to 3e-3
         $mm^{2}.s^{-1}$. Please ajust this value if you are assuming different
         units of diffusion.
-    weighting: str, optional
-        the weighting scheme to use in considering the
-        squared-error. Default behavior is to use uniform weighting. Other
-        options: 'sigma' 'gmm'
-    sigma: float, optional
-        If the 'sigma' weighting scheme is used, a value of sigma needs to be
-        provided here. According to [Chang2005]_, a good value to use is
-        1.5267 * std(background_noise), where background_noise is estimated
-        from some part of the image known to contain no signal (only noise).
+    mdreg : float, optimal
+        DTI's mean diffusivity regularization threshold. If standard DTI
+        diffusion tensor's mean diffusivity is almost near the free water
+        diffusion value, the diffusion signal is assumed to be only free water
+        diffusion (i.e. volume fraction will be set to 1 and tissue's diffusion
+        parameters are set to zero). Default md_reg is 2.7e-3 $mm^{2}.s^{-1}$
+        (corresponding to 90% of the free water diffusion value).
+    min_signal : float
+        The minimum signal value. Needs to be a strictly positive
+        number.
     cholesky : bool, optional
         If true it uses cholesky decomposition to insure that diffusion tensor
         is positive define.
@@ -447,77 +341,26 @@ def nls_fit_tensor(design_matrix, data, fw_params=None, S0=None, Diso=3e-3,
         Default: True
     jac : bool
         Use the Jacobian? Default: False
-    mdreg : float, optimal
-        DTI's mean diffusivity regularization threshold. If standard DTI
-        diffusion tensor's mean diffusivity is almost near the free water
-        diffusion value, the diffusion signal is assumed to be only free water
-        diffusion (i.e. volume fraction will be set to 1 and tissue's diffusion
-        parameters are set to zero). Default md_reg is 2.7e-3 $mm^{2}.s^{-1}$
-        (corresponding to 90% of the free water diffusion value).
 
     Returns
     -------
-    fw_params : ndarray (x, y, z, 13)
-        Matrix containing in the dimention the free water model parameters in
-        the following order:
-            1) Three diffusion tensor's eigenvalues
-            2) Three lines of the eigenvector matrix each containing the
-               first, second and third coordinates of the eigenvector
-            3) The volume fraction of the free water compartment
-    S0 : ndarray (x, y, z)
-        The models estimate of the non diffusion-weighted signal S0.
+    All parameters estimated from the free water tensor model.
+    Parameters are ordered as follows:
+        1) Three diffusion tensor's eigenvalues
+        2) Three lines of the eigenvector matrix each containing the
+           first, second and third coordinates of the eigenvector
+        3) The volume fraction of the free water compartment.
     """
-    # preparing data and initializing parameters
-    data = np.asarray(data)
-    data_flat = np.reshape(data, (-1, data.shape[-1]))
+    # Initial guess
+    params = wls_iter(design_matrix, sig, S0,
+                      min_signal=min_signal, Diso=Diso, mdreg=mdreg)
 
-    # Computing WLS DTI solution for MD regularization
-    dtiparams = dti_wls_fit(design_matrix, data_flat)
-    md = mean_diffusivity(dtiparams[..., :3])
-    cond = md > mdreg  # removal condition
-    data_cond = data_flat[~cond, :]
-
-    # Initializing fw_params according to selected initial guess
-    if np.any(fw_params) is None:
-        if np.any(S0) is None:
-            # If parameters and S0 are not given they both are estimated here
-            params_out, S0 = wls_fit_tensor(design_matrix, data_flat,
-                                            Diso=Diso)
-        else:
-            # If S0 is given we don't want to replace it
-            params_out, S0not = wls_fit_tensor(design_matrix, data_flat,
-                                               S0=S0, Diso=Diso)
-    else:
-        params_out = fw_params.copy()
-        params_out = np.reshape(params_out, (-1, params_out.shape[-1]))
-
-    # If is still None is parameters initial guess was given but not S0
-    if np.any(S0) is None:
-        evals = dtiparams[..., :3]
-        evecs = np.reshape(dtiparams[..., 3:12],
-                           (data_flat.shape[0],) + (3, 3))
-        dti_low_tri = lower_triangular(vec_val_vect(evecs, evals))
-        S0out = np.mean(data_flat /
-                        np.exp(np.dot(dti_low_tri, design_matrix[..., :6].T)),
-                        -1)
-    else:
-        S0out = S0.copy()
-        S0out = S0out.ravel()
-
-    params_cond = params_out[~cond, :]
-    S0_cond = S0out[~cond]
-
-    for vox in range(data_cond.shape[0]):
-        if np.all(data_cond[vox] == 0):
-            raise ValueError("The data in this voxel contains only zeros")
-
-        params = params_cond[vox]
-
+    # Process voxel if it has significant signal from tissue
+    if params[12] < 0.99 and np.mean(sig) > min_signal:
         # converting evals and evecs to diffusion tensor elements
         evals = params[:3]
         evecs = params[3:12].reshape((3, 3))
         dt = lower_triangular(vec_val_vect(evecs, evals))
-        s0 = S0_cond[vox]
 
         # Cholesky decomposition if requested
         if cholesky:
@@ -530,26 +373,16 @@ def nls_fit_tensor(design_matrix, data, fw_params=None, S0=None, Diso=3e-3,
             f = params[12]
 
         # Use the Levenberg-Marquardt algorithm wrapped in opt.leastsq
-        start_params = np.concatenate((dt, [-np.log(s0), f]), axis=0)
+        start_params = np.concatenate((dt, [-np.log(S0), f]), axis=0)
         if jac:
             this_tensor, status = opt.leastsq(_nls_err_func, start_params[:8],
-                                              args=(design_matrix,
-                                                    data_cond[vox],
-                                                    Diso,
-                                                    weighting,
-                                                    sigma,
-                                                    cholesky,
-                                                    f_transform),
+                                              args=(design_matrix, sig, Diso,
+                                                    cholesky, f_transform),
                                               Dfun=_nls_jacobian_func)
         else:
             this_tensor, status = opt.leastsq(_nls_err_func, start_params[:8],
-                                              args=(design_matrix,
-                                                    data_cond[vox],
-                                                    Diso,
-                                                    weighting,
-                                                    sigma,
-                                                    cholesky,
-                                                    f_transform))
+                                              args=(design_matrix, sig, Diso,
+                                                    cholesky, f_transform))
 
         # Invert the cholesky decomposition if this was requested
         if cholesky:
@@ -560,23 +393,89 @@ def nls_fit_tensor(design_matrix, data, fw_params=None, S0=None, Diso=3e-3,
             this_tensor[7] = 0.5 * (1 + np.sin(this_tensor[7] - np.pi/2))
 
         # The parameters are the evals and the evecs:
-        params_cond[vox, 12] = this_tensor[7]
-        S0_cond[vox] = np.exp(-this_tensor[6])
         evals, evecs = decompose_tensor(from_lower_triangular(this_tensor[:6]))
-        params_cond[vox, :3] = evals
-        params_cond[vox, 3:12] = evecs.ravel()
+        params = np.concatenate((evals, evecs[0], evecs[1], evecs[2],
+                                 np.array([this_tensor[7]])), axis=0)
+    return params
 
-    params_out[~cond, :] = params_cond
-    params_out[cond, 12] = 1  # Only free water
-    params_out = np.reshape(params_out, (data.shape[:-1]) + (13,))
-    S0out[~cond] = S0_cond
-    S0out[cond] = \
-        np.mean(data_flat[cond, :] /
-                np.exp(np.dot(design_matrix[..., :6],
-                              np.array([Diso, 0, Diso, 0, 0, Diso]))),
-                -1)  # Only free water
-    S0out = S0out.reshape(data.shape[:-1])
-    return params_out, S0out
+
+def nls_fit_tensor(gtab, data, mask=None, Diso=3e-3, mdreg=2.7e-3,
+                   min_signal=1.0e-6, f_transform=True, cholesky=False,
+                   jac=False):
+    """
+    Fit the water elimination tensor model using the non-linear least-squares.
+
+    Parameters
+    ----------
+    gtab : a GradientTable class instance
+        The gradient table containing diffusion acquisition parameters.
+    data : ndarray ([X, Y, Z, ...], g)
+        Data or response variables holding the data. Note that the last
+        dimension should contain the data. It makes no copies of data.
+    mask : array, optional
+        A boolean array used to mark the coordinates in the data that should
+        be analyzed that has the shape data.shape[:-1]
+    Diso : float, optional
+        Value of the free water isotropic diffusion. Default is set to 3e-3
+        $mm^{2}.s^{-1}$. Please ajust this value if you are assuming different
+        units of diffusion.
+    mdreg : float, optimal
+        DTI's mean diffusivity regularization threshold. If standard DTI
+        diffusion tensor's mean diffusivity is almost near the free water
+        diffusion value, the diffusion signal is assumed to be only free water
+        diffusion (i.e. volume fraction will be set to 1 and tissue's diffusion
+        parameters are set to zero). Default md_reg is 2.7e-3 $mm^{2}.s^{-1}$
+        (corresponding to 90% of the free water diffusion value).
+    min_signal : float
+        The minimum signal value. Needs to be a strictly positive
+        number. Default: 1.0e-6.
+    f_transform : bool, optional
+        If true, the water volume fractions is converted during the convergence
+        procedure to ft = arcsin(2*f - 1) + pi/2, insuring f estimates between
+        0 and 1.
+        Default: True
+    cholesky : bool, optional
+        If true it uses cholesky decomposition to insure that diffusion tensor
+        is positive define.
+        Default: False
+    jac : bool
+        Use the Jacobian? Default: False
+
+    Returns
+    -------
+    fw_params : ndarray (x, y, z, 13)
+        Matrix containing in the dimention the free water model parameters in
+        the following order:
+            1) Three diffusion tensor's eigenvalues
+            2) Three lines of the eigenvector matrix each containing the
+               first, second and third coordinates of the eigenvector
+            3) The volume fraction of the free water compartment
+    """
+    fw_params = np.zeros(data.shape[:-1] + (13,))
+    W = design_matrix(gtab)
+
+    # Prepare mask
+    if mask is None:
+        mask = np.ones(data.shape[:-1], dtype=bool)
+    else:
+        if mask.shape != data.shape[:-1]:
+            raise ValueError("Mask is not the same shape as data.")
+        mask = np.array(mask, dtype=bool, copy=False)
+
+    # Prepare S0
+    S0 = np.mean(data[:, :, :, gtab.b0s_mask], axis=-1)
+
+    index = ndindex(mask.shape)
+    for v in index:
+        if mask[v]:
+            params = nls_iter(W, data[v], S0[v],
+                              Diso=Diso, mdreg=mdreg,
+                              min_signal=min_signal,
+                              f_transform=f_transform, cholesky=cholesky,
+                              jac=jac)
+            fw_params[v] = params
+
+    return fw_params
 
 
 def lower_triangular_to_cholesky(tensor_elements):
@@ -645,33 +544,34 @@ def cholesky_to_lower_triangular(R):
 # -------------------------------------------------------------------------
 
 
-def nls_fit_tensor_bounds(design_matrix, data, fw_params=None, Diso=3e-3,
-                          bounds=None, jac=False, mdreg=2.7e-3):
-    """
-    Fit the water elimination tensor model using the non-linear least-squares.
+def nls_iter_bounds(design_matrix, sig, S0, Diso=3e-3, mdreg=2.7e-3,
+                    min_signal=1.0e-6, bounds, jac=False):
+    """ Applies non-linear least-squares fit with constraints of the water free
+    elimination model to single voxel signals.
 
     Parameters
     ----------
     design_matrix : array (g, 7)
         Design matrix holding the covariants used to solve for the regression
         coefficients.
-    data : ndarray ([X, Y, Z, ...], g)
-        Data or response variables holding the data. Note that the last
-        dimension should contain the data. It makes no copies of data.
-    fw_params : ndarray ([X, Y, Z, ...], 14), optional
-        A first model parameters guess (3 eigenvalues, 3 coordinates
-        of 3 eigenvalues, and the volume fraction of the free water
-        compartment). If the initial fw_paramters are not given, the function
-        will use free water DTI WLS solution. Default: None
-    S0 : ndarray ([X, Y, Z])
-        A first guess of the non-diffusion signal S0. If S0 and fw_params are
-        not given, an initial guess of the S0 will be extracted from the free
-        water WLS solution. If only S0 is not given, the function will use the
-        S0 estimate from standard DTI WLS. Default: None
+    sig : array (g, )
+        Diffusion-weighted signal for a single voxel data.
+    S0 : float
+        Non diffusion weighted signal (i.e. signal for b-value=0).
     Diso : float, optional
         Value of the free water isotropic diffusion. Default is set to 3e-3
         $mm^{2}.s^{-1}$. Please ajust this value if you are assuming different
         units of diffusion.
+    mdreg : float, optimal
+        DTI's mean diffusivity regularization threshold. If standard DTI
+        diffusion tensor's mean diffusivity is almost near the free water
+        diffusion value, the diffusion signal is assumed to be only free water
+        diffusion (i.e. volume fraction will be set to 1 and tissue's diffusion
+        parameters are set to zero). Default md_reg is 2.7e-3 $mm^{2}.s^{-1}$
+        (corresponding to 90% of the free water diffusion value).
+    min_signal : float
+        The minimum signal value. Needs to be a strictly positive
+        number.
     bounds : 2-tuple of arrays with 14 elements, optional
         Lower and upper bounds on fwdti model variables and the non-diffusion
         signal S0. Use np.inf with an appropriate sign to disable bounds on all
@@ -681,41 +581,26 @@ def nls_fit_tensor_bounds(design_matrix, data, fw_params=None, Diso=3e-3,
              [Diso, Diso, Diso, Diso, Diso, Diso, 1., np.exp(10.)])
     jac : bool
         Use the Jacobian? Default: False
-    mdreg : float, optimal
-        DTI's mean diffusivity regularization threshold. If standard DTI
-        diffusion tensor's mean diffusivity is almost near the free water
-        diffusion value, the diffusion signal is assumed to be only free water
-        diffusion (i.e. volume fraction will be set to 1 and tissue's diffusion
-        parameters are set to zero). Default md_reg is 2.7e-3 $mm^{2}.s^{-1}$
-        (corresponding to 90% of the free water diffusion value).
 
     Returns
     -------
-    fw_params : ndarray (x, y, z, 13)
-        Matrix containing in the dimention the free water model parameters in
-        the following order:
-            1) Three diffusion tensor's eigenvalues
-            2) Three lines of the eigenvector matrix each containing the
-               first, second and third coordinates of the eigenvector
-            3) The volume fraction of the free water compartment
-    S0 : ndarray (x, y, z, 13)
-        The models estimate of the non diffusion-weighted signal S0.
+    All parameters estimated from the free water tensor model.
+    Parameters are ordered as follows:
+        1) Three diffusion tensor's eigenvalues
+        2) Three lines of the eigenvector matrix each containing the
+           first, second and third coordinates of the eigenvector
+        3) The volume fraction of the free water compartment.
     """
-    # Flatten for the iteration over voxels:
-    flat_data = data.reshape((-1, data.shape[-1]))
-
-    # Computing WLS DTI solution for MD regularization
-    dti_params = dti_wls_fit(design_matrix, flat_data)
-    md = mean_diffusivity(dti_params[..., :3])
-    cond = md > mdreg  # removal condition
-    flat_data_p = flat_data[~cond, :]
+    # Initial guess
+    params = wls_iter(design_matrix, sig, S0,
+                      min_signal=min_signal, Diso=Diso, mdreg=mdreg)
 
     # Set bounds
-    if bounds==None:
+    if bounds is None:
         bounds = ([0., -Diso, 0., -Diso, -Diso, 0., -10., 0],
                   [Diso, Diso, Diso, Diso, Diso, Diso, 10., 1])
     else:
-        # In the helper subfunctions it was easier to have log(S0) first than 
+        # In the helper subfunctions it was easier to have log(S0) first than
         # the water volume. Therefore, we have to reorder the boundaries if
         # specified by the user
         S0low = np.log(bounds[0][7])
@@ -723,53 +608,21 @@ def nls_fit_tensor_bounds(design_matrix, data, fw_params=None, Diso=3e-3,
         bounds[0][7] = bounds[0][6]
         bounds[1][7] = bounds[1][6]
         bounds[0][6] = S0low
-        bounds[1][6] = S0hig   
+        bounds[1][6] = S0hig
 
-    # Initializing fw_params according to selected initial guess
-    if np.any(fw_params) is None:
-        if np.any(S0) is None:
-            fw_paramsc, S0 = wls_fit_tensor(design_matrix, flat_data,
-                                            Diso=Diso)
-        else:
-            fw_paramsc, S0f = wls_fit_tensor(design_matrix, flat_data, S0=S0,
-                                           Diso=Diso)
-    else:
-        fw_paramsc = fw_params.copy()
-        fw_paramsc = fw_paramsc.reshape((-1, fw_params.shape[-1]))
-
-    # Initializing S0 according to selected initial guess
-    if np.any(S0) is None:
-        evals = dti_params[..., :3]
-        evecs = dti_params[..., 3:12].reshape((len(flat_data),) + (3, 3))
-        dti_lower_tri = lower_triangular(vec_val_vect(evecs, evals))
-        S0f = np.mean(flat_data /
-                     np.exp(np.dot(dti_lower_tri, design_matrix[..., :6].T)),
-                     -1)
-    else:
-        S0f = S0.copy()
-        S0f = S0f.ravel()
-
-    fw_params_p = fw_paramsc[~cond, :]
-    S0_p = S0f[~cond]
-
-    for vox in range(flat_data_p.shape[0]):
-        if np.all(flat_data_p[vox] == 0):
-            raise ValueError("The data in this voxel contains only zeros")
-
-        params = fw_params_p[vox]
-
+    # Process voxel if it has significant signal from tissue
+    if params[12] < 0.99 and np.mean(sig) > min_signal:
         # converting evals and evecs to diffusion tensor elements
         evals = params[:3]
         evecs = params[3:12].reshape((3, 3))
         dt = lower_triangular(vec_val_vect(evecs, evals))
-        s0 = S0_p[vox]
 
         # Use the Levenberg-Marquardt algorithm wrapped in opt.leastsq
-        start_params = np.concatenate((dt, [-np.log(s0), f]), axis=0)
+        start_params = np.concatenate((dt, [-np.log(S0), f]), axis=0)
         lb = np.array(bounds[0])
         ub = np.array(bounds[1])
-        start_params[start_params<lb] = lb[start_params<lb]
-        start_params[start_params>ub] = ub[start_params>ub]       
+        start_params[start_params < lb] = lb[start_params < lb]
+        start_params[start_params > ub] = ub[start_params > ub]
         if jac:
             out = opt.least_squares(_nls_err_func, start_params[:8],
                                     args=(design_matrix, flat_data[vox],
@@ -784,20 +637,80 @@ def nls_fit_tensor_bounds(design_matrix, data, fw_params=None, Diso=3e-3,
         this_tensor = out.x
 
         # The parameters are the evals and the evecs:
-        fw_params_p[vox, 12] = this_tensor[7]
-        S0_p[vox] = np.exp(-this_tensor[6])
         evals, evecs = decompose_tensor(from_lower_triangular(this_tensor[:6]))
-        fw_params_p[vox, :3] = evals
-        fw_params_p[vox, 3:12] = evecs.ravel()
+        params = np.concatenate((evals, evecs[0], evecs[1], evecs[2],
+                                 np.array([this_tensor[7]])), axis=0)
+    return params
 
-    fw_paramsc[~cond, :] = fw_params_p
-    fw_paramsc[cond, 12] = 1  # Only free water
-    fw_paramsc = fw_paramsc.reshape((data.shape[:-1]) + (14,))
-    S0f[~cond] = S0_p
-    S0f[cond] = np.mean(data[cond, :] / 
-                        np.exp(np.dot(design_matrix[..., :6],
-                                      np.array([Diso, 0, Diso, 0, 0, Diso]))),
-                        -1)  # Only free water
-    S0f = S0f.reshape(data.shape[:-1])
-    return fw_paramsc, S0f
 
+def nls_fit_tensor_bounds(gtab, data, mask=None, Diso=3e-3, mdreg=2.7e-3,
+                          min_signal=1.0e-6, bounds=None, jac=False):
+    """
+    Fit the water elimination tensor model using the non-linear least-squares
+    with constraints
+
+    gtab : a GradientTable class instance
+        The gradient table containing diffusion acquisition parameters.
+    data : ndarray ([X, Y, Z, ...], g)
+        Data or response variables holding the data. Note that the last
+        dimension should contain the data. It makes no copies of data.
+    mask : array, optional
+        A boolean array used to mark the coordinates in the data that should
+        be analyzed that has the shape data.shape[:-1]
+    Diso : float, optional
+        Value of the free water isotropic diffusion. Default is set to 3e-3
+        $mm^{2}.s^{-1}$. Please ajust this value if you are assuming different
+        units of diffusion.
+    mdreg : float, optimal
+        DTI's mean diffusivity regularization threshold. If standard DTI
+        diffusion tensor's mean diffusivity is almost near the free water
+        diffusion value, the diffusion signal is assumed to be only free water
+        diffusion (i.e. volume fraction will be set to 1 and tissue's diffusion
+        parameters are set to zero). Default md_reg is 2.7e-3 $mm^{2}.s^{-1}$
+        (corresponding to 90% of the free water diffusion value).
+    min_signal : float
+        The minimum signal value. Needs to be a strictly positive
+        number. Default: 1.0e-6.
+    bounds : 2-tuple of arrays with 14 elements, optional
+        Lower and upper bounds on fwdti model variables and the non-diffusion
+        signal S0. Use np.inf with an appropriate sign to disable bounds on all
+        or some variables. When bounds is set to None the following default
+        variable bounds is used:
+            ([0., -Diso, 0., -Diso, -Diso, 0., 0., np.exp(-10.)],
+             [Diso, Diso, Diso, Diso, Diso, Diso, 1., np.exp(10.)])
+    jac : bool
+        Use the Jacobian? Default: False
+
+    Returns
+    -------
+    fw_params : ndarray (x, y, z, 13)
+        Matrix containing in the dimention the free water model parameters in
+        the following order:
+            1) Three diffusion tensor's eigenvalues
+            2) Three lines of the eigenvector matrix each containing the
+               first, second and third coordinates of the eigenvector
+            3) The volume fraction of the free water compartment
+    """
+    fw_params = np.zeros(data.shape[:-1] + (13,))
+    W = design_matrix(gtab)
+
+    # Prepare mask
+    if mask is None:
+        mask = np.ones(data.shape[:-1], dtype=bool)
+    else:
+        if mask.shape != data.shape[:-1]:
+            raise ValueError("Mask is not the same shape as data.")
+        mask = np.array(mask, dtype=bool, copy=False)
+
+    # Prepare S0
+    S0 = np.mean(data[:, :, :, gtab.b0s_mask], axis=-1)
+
+    index = ndindex(mask.shape)
+    for v in index:
+        if mask[v]:
+            params = nls_iter_bounds(W, data[v], S0[v], Diso=Diso, mdreg=mdreg,
+                                     min_signal=min_signal, bounds=bounds,
+                                     jac=jac)
+            fw_params[v] = params
+
+    return fw_params
