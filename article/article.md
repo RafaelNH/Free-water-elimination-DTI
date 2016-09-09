@@ -43,112 +43,112 @@ Bibliography:
 
 # Introduction
 
-Diffusion-weighted Magnetic Resonance Imaging (DWI) is a non-invasive biomedical
-imaging technique that allows us to infer properties of brain tissue
-microstructures in vivo. Diffusion tensor imaging (DTI), one of the most
-commonly used DWI techniques, models anisotropy diffusion of tissues using a
+Diffusion-weighted Magnetic Resonance Imaging (DW-MRI) is a non-invasive
+biomedical imaging technique that allows us to infer properties of brain tissue
+microstructure in vivo. Diffusion tensor imaging (DTI), one of the most
+commonly used DW-MRI techniques, models diffusion anisotropy of tissues using a
 second-order tensor known as the diffusion tensor (DT) [@Basser1994-zd], [@Basser1994-hg].
-DTI-based measures such as the fractional anisotropy (FA) and mean diffusivity  (MD) are
-normally used to assess properties of brain microstructure.
+DTI-based measures such as fractional anisotropy (FA) and mean diffusivity (MD)
+are normally used to assess properties of brain microstructure.
 
 For example, FA is thought to be an indicator of different microstructural properties:
 packing density of axons, and the density of myelin in nerve fibers [@beaulieu2002],
-but also signals white matter coherence -- the alignment of axons within a measurement voxel.
+but also indicates white matter coherence -- the alignment of axons within a measurement voxel.
 However, because a measurement voxel can contain partial volumes of different
 types of tissue, these measures are not always specific to one particular type of tissue.
-For example, diffusion anisotropy in regions near the cerebral ventricle and parenchyma can be
+For example, diffusion anisotropy in regions near cerebral ventricle and parenchyma can be
 underestimated by partial volume effects of cerebral spinal fluid (CSF). To
 remove the influence of this free water diffusion contamination, the DTI model
-can be expanded to take into account two compartments representing the diffusion
-contributions from the tissue and from the CSF. Recently, two procedures were
-proposed by Hoy and colleagues to fit the free water elimination of
-DWI data acquired with two or more diffusion gradient-weightings [@Hoy2014-lk,].
-Although, these procedures are showed to provide diffusion based measures stable
+can be expanded to take into account the contributions of free water diffusion by representing
+the tissue compartments with an anisotropic diffusion tensor and the CSF compartment as an isotropic
+free water diffusion coefficient of 3.0 \times 10^{-3}  mm^{2}.s^{-1} . Recently, two procedures were
+proposed by Hoy and colleagues to fit this two compartment model to
+diffusion-weighted data acquired with two or more diffusion gradient-weightings [@Hoy2014-lk,].
+Although these procedures have been shown to provide diffusion based measures stable
 to different free water contamination degrees, the authors mentioned that their
 original algorithms were "implemented by a group member with no formal programming
 training and without optimization for speed" [@Hoy2014-lk,]. In this work, we provide
 the first open-source reference implementation of the free water contamination DTI
-model fitting procedures. All implementations are made in Python based on the
-descriptions provided in Hoy et al.'s original article. For speed optimization,
-all necessary standard DT processing steps are done using previously optimized functions
-of the software project Diffusion Imaging in Python (Dipy, http://nipy.org/dipy/,  [@Garyfallidis2014-zo])
+model. All implementations are made in Python based on the descriptions provided
+in Hoy et al.'s original article. For speed optimization, all necessary standard
+DT processing steps used previously optimized functions freely available with the software 
+package Diffusion Imaging in Python (Dipy, http://nipy.org/dipy/,  [@Garyfallidis2014-zo])
 and the optimization algorithms provided by the open-source software for mathematics,
 science, and engineering Scipy (http://scipy.org/).
 
 # Methods
 
-## Procedures Implementation
+## Implementation of fitting algorithms
 
 Since no source implementation was previously provided by Hoy and colleagues,
 our implementation relies on the equations provided in the original article.
 
 **Weighted-Linear Least Square (WLS).** Two errors were found
-in the equations describing the first proposed algorithm. First, the free-water adjusted
+in the equations describing the first proposed algorithm. Firstly, the free-water adjusted
 diffusion-weighted signal formula (original article's Methods subsection
 "FWE-DTI") should be written as:
 
 $$y_{ik} = \ln\left\{ \frac{s_i - s_0 f_k\exp(-bD_{iso})}{(1-f_k)} \right \}$$ {#eq:1}
 
-Second, according to the general linear least squares solution [@Jones2010-pg],
-the weighted linear least square solution of the free-water elimination model's
+Secondly, according to the general linear least squares solution [@Jones2010-pg],
+the weighted linear least squares solution to the free-water elimination model's
 matrix solution should be given as:
 
 $$\gamma = (W^TS^2W)^{-1}W^{T}S^{2}y$$ {#eq:2}
 
-Moreover, to insure that the WLS method converges to the local minima,
-on the second and third iteration that are used to refine the precision, the water
-contamination volume fraction were resampled with steps sizes of 0.1 and 0.01
-instead of the step sizes of 0.05 and 0.005 suggested by Hoy and Colleges.
+Moreover, to ensure that the WLS method converges to the local minima,
+the second and third iterations are used to refine the precision and therefore,
+the water contamination volume fraction was resampled with steps sizes of 0.1 and 0.01
+instead of the step sizes of 0.05 and 0.005 suggested by Hoy and colleagues.
 
-Similar to the original article [@Hoy2014-lk,], the WLS procedure is only used here
-to obtain the free water elimination model parameters intial gues for the 
-non-linear convergence procedure (see below).
+Similarly to the original article [@Hoy2014-lk,], the WLS procedure is only used here
+to obtain the intial guess for the free water elimination parameters, which were then
+used to initialize the non-linear convergence procedure (see below).
 
-**Non-Linear Least Square Solution (NLS)**. As suggested by Hoy and Colleges
-[@Hoy2014-lk,], the model parameters initial guess for the non-linear convergence
-procedure were set to the values estimated from the WLS approach. To improve the speed of computation,
-instead of using the modified Newton's method algorithm proposed in the original article,
-the non-linear covergence was done using Scipy's wrapped modified Levenberg-Marquardt algorithm
-(the function `scipy.optimize.leastsq` of Scipy http://scipy.org/). To constrain the
-model parameters to within a plausibe range, the free water volume fraction $f$ was
+**Non-Linear Least Square Solution (NLS)**. As suggested by Hoy and colleagues
+[@Hoy2014-lk,], the initial guess for the non-linear convergence
+procedure was set to the values estimated from the WLS approach. To improve the speed of
+computation, instead of using the modified Newton's algorithm proposed in the original article,
+the non-linear convergence was done using Scipy's wrapped modified Levenberg-Marquardt algorithm
+(function `scipy.optimize.leastsq` of Scipy http://scipy.org/). To constrain the
+model parameters to within a plausible range, the free water volume fraction $f$ was
 converted to $f_t = \arcsin (2f-1) + \pi / 2$. To compare the robustness of the
 techniques with and without this constraint, the free water volume fraction transformation was implemented
-as an optional feature that can be controlled through user-provided key-word arguments. In addition to
+as an optional feature that can be controlled through user-provided arguments. In addition to
 the `scipy.optimize.leastsq` function, a more recently implemented version of Scipy's optimization function
 `scipy.optimize.least_square` (available as of Scipy's version 0.17) was also tested.
-This newer function allows solving the non-linear problem directly bounded with predefined
+The latter directly solves the non-linear problem with predefined
 constraints in a similar fashion to what is done in the original article, however
 our experiments showed that this procedure does not overcome the performance of
-`scipy.optimize.leastsq` procedure in terms of accuracy, and requires more computing time
-(see supplementary_notebook_1.ipynb for more details). To speed the
+`scipy.optimize.leastsq` in terms of accuracy, and requires more computing time
+(see supplementary_notebook_1.ipynb for more details). To speed up the
 performance of the non-linear optimization procedure, the free water elimination DTI model
-jacobian was analytically derived and incorporated to the non-linear procedure (for the details
+jacobian was analytically derived and incorporated in the non-linear procedure (for details
 of the jacobian derivation see supplementary_notebook_2.ipynb). As an expansion of
 the work done by Hoy and colleagues, we also allow users to use the Cholesky
-decomposition of the diffusion tensor to insure that this is a positive definite tensor
-[@Koay2006-zo]. Due to the increase of the model's mathematical complexity, the
-Cholesky decomposition is not used by default and it is not compatible with the
-analytical jacobian derivation.
+decomposition of the diffusion tensor to ensure that this is a positive definite tensor
+[@Koay2006-zo]. Due to increased mathematical complexity, the Cholesky decomposition
+is not used by default and it is not compatible with the analytical jacobian
+derivation.
 
 **Removing problematic estimates**
 
-For cases that the ground truth free water volume fraction is one (i.e. voxels
-containing only free water), the tissue's diffusion tensor component can erroneuously
-overfit the free water diffusion signal and erroneuously induce estimates of
+For cases where the ground truth free water volume fraction is one (i.e. voxels
+containing only free water), the tissue's diffusion tensor component can erroneously
+overfit the free water diffusion signal and erroneously induce estimates of
 the water volume fraction near to zero. To remove these problematic cases, for all voxels with
-standard DTI's mean diffusivity values larger than 2.7 mm^{2}.s^{-1}, the free
-water volume fraction is set to one while all tissue's diffusion tensor
-parameters are set to zero. This mean diffusivity threshold was adjusted to 90%
+standard DTI mean diffusivity values larger than 2.7 \times 10^{-3} mm^{2}.s^{-1}, the free
+water volume fraction is set to one while all other diffusion tensor
+parameters are set to zero. This mean diffusivity threshold was arbitray adjusted to 90%
 of the theoretical free water diffusion value, however this can be adjusted by
 changing the optional input 'mdreg' in both WLS and NLS free water elimination
 procedures.
 
 **Implementation Dependencies**. In addition to the dependency on Scipy, both
-free water elimination fitting procedures requires modules from the open source
-software project Dipy  [@Garyfallidis2014-zo], since these contain all necessary
-standard diffusion tensor processing functions. Although, the core algorithms of
-the free water elimination procedures are implemented here separately from Dipy,
-in the near future, a version of these will be incorporated as a sub-module of Dipy's model
+free water elimination fitting procedures require modules from Dipy [@Garyfallidis2014-zo],
+since these contain all necessary standard diffusion tensor fitting functions.
+Although the core algorithms for the free water elimination model are implemented here separately from Dipy,
+a version of these will be incorporated as a sub-module of Dipy's model
 reconstruction module (https://github.com/nipy/dipy/pull/835). In addition, the
 implemented procedures also requires the python pakage NumPy (http://www.numpy.org/),
 which is also a dependency of both Scipy and Dipy.
@@ -158,10 +158,10 @@ In their original study, Hoy and colleagues simulated a measurement along 32 dif
 direction with diffusion weighting b-values of 500 and 1500 s.mm^{-2} and with six b-value=0 images.
 These simulations correspond to the results reported in Fig.5 of the original article.
 We conducted Monte Carlo simulations using the multi-tensor simulation
-module available in Dipy and using identical simulated measurement acquisition parameters.
-As in the original article, fitting procedures are tested for voxels with 5 different FA values
-and with constant diffusion trace of $2.4 \times 10^{-3} mm^{2}.s^{-1}$. The eigenvalues used for the 5 FA levels
-are reported in @tbl:table.
+module available in Dipy and using identical simulated acquisition parameters.
+As in the original article, fitting procedures are tested for voxels with five different FA values
+and with constant diffusion trace of $2.4 \times 10^{-3} mm^{2}.s^{-1}$.
+The eigenvalues used for the five FA levels are reported in @tbl:table.
 
 Table: Eigenvalues values used for the simulations {#tbl:table}
 
@@ -172,8 +172,8 @@ $\lambda_2$  $8.00 \times 10^{-4}$  $7.63 \times 10^{-4}$  $7.25 \times 10^{-4}$
 $\lambda_3$  $8.00 \times 10^{-4}$  $7.38 \times 10^{-4}$  $6.75 \times 10^{-4}$  $6.25 \times 10^{-4}$  $3.00 \times 10^{-4}$
 
 For each FA value, eleven different degrees of free water contamination were
-evaluated (f values equaly spaced from 0 to 1). To assess the robustness of the
-procedure, Rician noise with signal-to-noise ration (SNR) of 40 relative to the b-value = 0 images was
+evaluated (f values equally spaced from 0 to 1). To assess the robustness of the
+procedure, Rician noise with signal-to-noise ratio (SNR) of 40 relative to the b-value = 0 images was
 used. For each FA and f-value pair, simulations were performed for 120
 different diffusion tensor orientation. Simulations for each diffusion tensor
 orientation were repeated 100 times making a total of 12000 simulation
@@ -181,55 +181,67 @@ iterations for each FA and f-value pair.
 
 ## In vivo data
 
-Similar to the original article, the procedures are also tested on in vivo human brain data.
-This dataset used here was kindly supplied by Valabregue Romain, CENIR, ICM, Paris
+Similarly to the original article, the procedures are also tested using in vivo human brain data.
+The dataset used here was kindly supplied by Valabregue Romain, CENIR, ICM, Paris
 (https://digital.lib.washington.edu/researchworks/handle/1773/33311) and can be automatically
-downloaded Dipy's functions. The original dataset consisted of 74 volumes of images acquired for a
-b-value of 0 s.mm^{-2} and 578 volumes of images acquired along 16 diffusion gradient directions
+downloaded by Dipy's functions. The original dataset consisted of 74 volumes of images acquired for a
+b-value of 0 s.mm^{-2} and 578 volumes diffusion weighted images acquired along 16 diffusion gradient directions
 for b-values of 200 and 400 s.mm^{-2} and along 182 diffusion gradient directions for b-values
 of 1000, 2000 and 3000 s.mm^{-2}. In this study, only the data for b-values up to 2000 $s.mm^{-2}
-are used to decrease the influence of non-Gaussian diffusion effects of the tisse which are not
+are used to decrease the impact of non-Gaussian diffusion effects which are not
 taken into account by the free water elimination model _[Hoy2014]. In addition to the free water
 elimination model, we also process the data using the standard DTI tensor model for comparison purposes
 (this model is already implemented in Dipy).
 
 # Results
 
-The results from the Monte Carlo simulations are shown in @fig:simulations. Similar to what is reported
-in the original article, simulations show that FA values estimated using the free water elimination model
-match the ground truth tissue FA values for free water volume fractions $f$ ranging around 0 to 0.7 (upper panel of
-@fig:simulations). However, FA values seem to be overestimated for higher volume fractions. This bias seem
-to be more prominent for lower FA values in which overestimations are visible from lower free water volume
+The results from the Monte Carlo simulations are shown in @fig:simulations. Similarly to what is reported
+in the original article, FA values estimated using the free water elimination model match the tissue's ground truth
+values for free water volume fractions $f$ ranging around 0 to 0.7 (top panel of
+@fig:simulations). However, FA values seem to be overestimated for higher volume fractions. This bias is more
+prominent for lower FA values in which overestimations are visible from lower free water volume
 fractions. The lower panels of @fig:simulations suggest that the free water elimination model produce
-accurate free water volume fraction for the full range of volume fraction ground truth values. All observations
-done here are consistent to Fig.5 of the original article.
+accurate free water volume fraction for the full range of volume fraction ground truth values. All the features observed
+here are consistent with Fig.5 of the original article.
 
-![Fig.1 - Fractional Anisotropy (FA) and Mean diffusivity (MD) estimates obtain from the Monte Carlo simulation 
-using the free water elimination fitting procedures. The upper panel show the FA median and intra-quartil ranges
-for the 5 different FA ground truth levels and plotted as function of the ground truth water volume fraction, while the
-lower panels show the estimated volume fraction $f$ median and intra-quartil ranges as function of its ground truth values
-for the higher and lower FA simulated level. This figure reproduces Fig.4 of the original article](fwdti_simulations.png) {#fig:simulations}
+![Fig.1 - Fractional Anisotropy (FA) and free water volume fraction ($f$) estimates obtained with the from the Monte Carlo simulations 
+using the free water elimination fitting procedures. The top panel shows the FA median and intra-quartil range
+for the five different FA ground truth levels and plotted as function of the ground truth water volume fraction.
+The bottom panels show the estimated volume fraction $f$ median and intra-quartil range as function of its ground truth values
+(right and left panels correspond to the higher and lower FA values, respectively). This figure reproduces
+Fig.7 of the original article](fwdti_simulations.png) {#fig:simulations}
 
-In vivo tensor statistics obtain from the free water elimination and standard DTI models are
-are shown in {#fig:invivo}. Similar to Fig.7 of the original article, FA values from 
+In vivo tensor statistics obtained from the free water elimination and standard DTI models
+are shown in {#fig:invivo}. The free water elimination model seems to produce higher values of FA
+in general and lower values of MD relative to the metrics obtained from the standard DTI model.
+These differences in FA and MD estimates are expected due to the suppression of the free water
+isotropic diffusion of 3.0 \times 10^{-3} mm^{2}.s^{-1}. Unexpected
+high amplitudes of FA are however observed in the periventricular gray mater. As mentioned in the original article,
+this FA overestimation is related to the inflated values of FA in voxels with high $f$ values and
+can be mitigated by excluding voxels with high volume free water volume
+fraction estimates (see supplementary_notebook_3.ipynb).
 
-![Fig. 2 - ](In_vivo_free_water_DTI_and_standard_DTI_measures.png) {#fig:invivo}
+![Fig. 2 - In vivo diffusion measures obtained from the free water DTI and standard
+   DTI. The values of FA for the free water DTI model, the standard DTI model and
+   their difference are shown in the top panels (A-C),
+   while respective MD values are shown in the bottom panels (D-F). In addition
+   the free water volume fraction estimated from the free water DTI model is shown in
+   panel G](In_vivo_free_water_DTI_and_standard_DTI_measures.png) {#fig:invivo}
 
 
 # Conclusion
 
 Despite the changes done to improve the algorithms speed performance, the
-implemented procedures to solve the free water elimination DTI model have identical performance
-in terms of accuracy to the original methods described by Hoy and Colleagues [@Hoy2014-lk].
+implemented procedures to solve the free water elimination DTI model have comparable performance
+in terms of accuracy to the original methods described by Hoy and colleagues [@Hoy2014-lk].
 Based on similar Monte Carlo simulations with the same SNR used in the original article,
 our results confirmed that the free water elimination DTI model is able to remove confounding effects
-of fast diffusion for typical FA values of the brain white matter. Similar to
-what was reported by Hoy and Colleagues, the proposed procedures seem to produce
-biased values of FA for free water volume fractions near to one. Nevertheless,
+of fast diffusion for typical FA values of brain white matter. Similarly to
+what was reported by Hoy and Colleagues, the proposed procedures seem to generate
+biased values of FA for free water volume fractions near one. Nevertheless,
 our results confirm that these problematic cases correspond to regions that are not
 of interest in neuroimaging analysis (voxels associated with cerebral ventricles)
-and might be removed by excluding voxels with high volume free water volume
-fractions estimates.
-
+and might be removed by excluding voxels with measured volume fractions above a reasonable 
+threshold such as 0.7.
 
 # References
