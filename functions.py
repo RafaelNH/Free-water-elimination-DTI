@@ -85,7 +85,7 @@ def wls_iter(design_matrix, sig, S0, Diso=3e-3, mdreg=2.7e-3,
 
     md = (params[0] + params[2] + params[5]) / 3
     # Process voxel if it has significant signal from tissue
-    if md < mdreg and np.mean(sig) > min_signal:
+    if md < mdreg and np.mean(sig) > min_signal and S0 > min_signal:
         # General free-water signal contribution
         fwsig = np.exp(np.dot(design_matrix,
                               np.array([Diso, 0, Diso, 0, 0, Diso, 0])))
@@ -356,7 +356,7 @@ def nls_iter(design_matrix, sig, S0, Diso=3e-3, mdreg=2.7e-3,
                       min_signal=min_signal, Diso=Diso, mdreg=mdreg)
 
     # Process voxel if it has significant signal from tissue
-    if params[12] < 0.99 and np.mean(sig) > min_signal:
+    if params[12] < 0.99 and np.mean(sig) > min_signal and S0 > min_signal:
         # converting evals and evecs to diffusion tensor elements
         evals = params[:3]
         evecs = params[3:12].reshape((3, 3))
@@ -545,7 +545,7 @@ def cholesky_to_lower_triangular(R):
 
 
 def nls_iter_bounds(design_matrix, sig, S0, Diso=3e-3, mdreg=2.7e-3,
-                    min_signal=1.0e-6, bounds, jac=False):
+                    min_signal=1.0e-6, bounds=None, jac=False):
     """ Applies non-linear least-squares fit with constraints of the water free
     elimination model to single voxel signals.
 
@@ -616,6 +616,7 @@ def nls_iter_bounds(design_matrix, sig, S0, Diso=3e-3, mdreg=2.7e-3,
         evals = params[:3]
         evecs = params[3:12].reshape((3, 3))
         dt = lower_triangular(vec_val_vect(evecs, evals))
+        f = params[12]
 
         # Use the Levenberg-Marquardt algorithm wrapped in opt.leastsq
         start_params = np.concatenate((dt, [-np.log(S0), f]), axis=0)
@@ -625,13 +626,13 @@ def nls_iter_bounds(design_matrix, sig, S0, Diso=3e-3, mdreg=2.7e-3,
         start_params[start_params > ub] = ub[start_params > ub]
         if jac:
             out = opt.least_squares(_nls_err_func, start_params[:8],
-                                    args=(design_matrix, flat_data[vox],
+                                    args=(design_matrix, sig,
                                           Diso, False, False),
                                     jac=_nls_jacobian_func,
                                     bounds=bounds)
         else:
             out = opt.least_squares(_nls_err_func, start_params[:8],
-                                    args=(design_matrix, flat_data[vox],
+                                    args=(design_matrix, sig,
                                           Diso, False, False),
                                     bounds=bounds)
         this_tensor = out.x

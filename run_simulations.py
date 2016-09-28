@@ -1,11 +1,10 @@
 import numpy as np
 import matplotlib.pyplot as plt
-import matplotlib
 import time
 import sys
 
 # To sample the diffusion-weighted directions
-from dipy.core.sphere import disperse_charges, Sphere, HemiSphere
+from dipy.core.sphere import disperse_charges, HemiSphere
 
 # To reconstruct the tables with the acquisition information
 from dipy.core.gradients import gradient_table
@@ -17,7 +16,7 @@ from dipy.sims.voxel import multi_tensor
 import dipy.reconst.dti as dti
 
 # Importing procedures to fit the free water elimination DTI model
-from functions import (wls_fit_tensor, nls_fit_tensor)
+from functions import nls_fit_tensor
 
 # ---------------------------------------------------------------
 print('Defining the acquistion parameters...')
@@ -31,14 +30,13 @@ theta = np.pi * np.random.rand(n_pts)
 phi = 2 * np.pi * np.random.rand(n_pts)
 hsph_initial = HemiSphere(theta=theta, phi=phi)
 hsph_updated, potential = disperse_charges(hsph_initial, 5000)
-directions = hsph_updated.vertices # directions for each shell
+directions = hsph_updated.vertices  # directions for each shell
 
 # Create full dataset parameters
 # (6 b-values = 0, 32 directions for each b-values 500 and 1500)
 bvals = np.hstack((np.zeros(6), 500 * np.ones(n_pts), 1500 * np.ones(n_pts)))
 bvecs = np.vstack((np.zeros((6, 3)), directions, directions))
 gtab = gradient_table(bvals, bvecs)
-design_matrix = dti.design_matrix(gtab)
 
 # ---------------------------------------------------------------
 print('Defining the ground truth values of tissue and water diffusion...')
@@ -61,7 +59,7 @@ theta = np.pi * np.random.rand(nDTdirs)
 phi = 2 * np.pi * np.random.rand(nDTdirs)
 hsph_initial = HemiSphere(theta=theta, phi=phi)
 hsph_updated, potential = disperse_charges(hsph_initial, 5000)
-DTdirs = hsph_updated.vertices # directions for each shell
+DTdirs = hsph_updated.vertices  # directions for each shell
 
 nrep = 100  # number of repetitions for each direction
 
@@ -92,35 +90,11 @@ for fa_i in range(FA.size):
     sys.stdout.flush()
 
 # ----------------------------------------------------------------
-print('Computing initial guess using the WLS procedure...')
+print('Fitting the free water DTI model...')
 # ----------------------------------------------------------------
-
-# find S0 from data
-S0 = np.mean(DWI_simulates[:, :, :, bvals==0], axis=3)
 
 t0 = time.time()
-
-# WLS procedures is used to estimate parameters initial guess
-fw_params_initial, S0f = wls_fit_tensor(design_matrix, DWI_simulates,
-                                        Diso=Dwater, S0=S0)
-
-dt = time.time() - t0
-print("This step took %f seconds to run" % dt)
-
-# ----------------------------------------------------------------
-print('Refining the free water DTI model fit using the NLS procedure...')
-# ----------------------------------------------------------------
-
-fw_params = fw_params_initial.copy()
-
-t0 = time.time()
-
-# NLLS procedures is used to find final parameters guess
-fw_params, S0f = nls_fit_tensor(design_matrix, DWI_simulates, 
-                                fw_params=fw_params, S0=S0,
-                                Diso=Dwater, cholesky=False,
-                                f_transform=True)
-
+fw_params = nls_fit_tensor(gtab, DWI_simulates, Diso=Dwater)
 dt = time.time() - t0
 print("This step took %f seconds to run" % dt)
 
@@ -145,8 +119,8 @@ axs[0, 0].set_xlim([-0.1, 1.2])
 for fa_i in range(FA.size):
     for vf_i in range(VF.size):
         median_fa[vf_i] = np.median(fa[fa_i, vf_i, :])
-        p25, p75 = np.percentile(fa[fa_i, vf_i, :], [25 ,75])
-        lower_p[vf_i] = median_fa[vf_i] - p25 
+        p25, p75 = np.percentile(fa[fa_i, vf_i, :], [25, 75])
+        lower_p[vf_i] = median_fa[vf_i] - p25
         lower_p[vf_i] = p75 - median_fa[vf_i]
     axs[0, 0].errorbar(VF/100, median_fa, fmt='.',
                        yerr=[lower_p, lower_p],
@@ -167,23 +141,23 @@ upper_p = np.empty(VF.size)
 for idx, fa_i in enumerate([0, 4]):
     for vf_i in range(VF.size):
         median_f[vf_i] = np.median(f[fa_i, vf_i, :])
-        p25, p75 = np.percentile(f[fa_i, vf_i, :], [25 ,75])
-        lower_p[vf_i] = median_f[vf_i] - p25 
+        p25, p75 = np.percentile(f[fa_i, vf_i, :], [25, 75])
+        lower_p[vf_i] = median_f[vf_i] - p25
         lower_p[vf_i] = p75 - median_f[vf_i]
     axs[1, idx].errorbar(VF/100, median_f, fmt='.',
-                      yerr=[lower_p, lower_p],
-                      color=colors[fa_i],
-                      ecolor=colors[fa_i],
-                      linewidth=3.0,
-                      label='$FA: %.2f$' % FA[fa_i])
+                         yerr=[lower_p, lower_p],
+                         color=colors[fa_i],
+                         ecolor=colors[fa_i],
+                         linewidth=3.0,
+                         label='$FA: %.2f$' % FA[fa_i])
     # plot ground truth lines
-    axs[1, idx].plot([0, 1], [0, 1], 'b', label = 'Simulated f-value')
+    axs[1, idx].plot([0, 1], [0, 1], 'b', label='Simulated f-value')
     axs[1, idx].legend(loc='upper left')
     axs[1, idx].set_ylim([-0.1, 1.2])
     axs[1, idx].set_xlim([-0.1, 1.2])
     axs[1, idx].set_xlabel('Simulated f-value')
     axs[1, idx].set_ylabel('Estimated f-value')
-    
+
 fig.savefig('fwdti_simulations.png')
 
 print('done!')
