@@ -351,10 +351,6 @@ def nls_iter(design_matrix, sig, S0, Diso=3e-3, mdreg=2.7e-3,
            first, second and third coordinates of the eigenvector
         3) The volume fraction of the free water compartment.
     """
-    # Analyse compatible input cases
-    if jac is True and cholesky is True:
-        raise ValueError("Cholesky decomposition is not compatible with jac.")
-
     # Initial guess
     params = wls_iter(design_matrix, sig, S0,
                       min_signal=min_signal, Diso=Diso, mdreg=mdreg)
@@ -455,6 +451,10 @@ def nls_fit_tensor(gtab, data, mask=None, Diso=3e-3, mdreg=2.7e-3,
                first, second and third coordinates of the eigenvector
             3) The volume fraction of the free water compartment
     """
+    # Analyse compatible input cases
+    if jac is True and cholesky is True:
+        raise ValueError("Cholesky decomposition is not compatible with jac.")
+
     fw_params = np.zeros(data.shape[:-1] + (13,))
     W = design_matrix(gtab)
 
