@@ -96,10 +96,18 @@ matrix solution should be given as:
 
 $$\gamma = (W^TS^2W)^{-1}W^{T}S^{2}y$$ {#eq:2}
 
-Moreover, to ensure that the WLS method converges to the local minima,
+Thirdly, to ensure that the WLS method converges to the local minima,
 the second and third iterations are used to refine the precision and therefore,
 the water contamination volume fraction was resampled with steps sizes of 0.1 and 0.01
 instead of the step sizes of 0.05 and 0.005 suggested by Hoy and colleagues.
+
+Moreover, since the WLS objective function is sensitive to the squared error
+of the model weights, when evaluating which ($f$, $D_tissue$) pair is associated
+with smaller residuals the NLS objective function is used instead:
+
+$$F_{NLS} = \frac{1}{2} \sum_{m}^{i=1} \left
+ [s_{i} - S_{0} f\exp(-\sum_{j=2}^{4}W_{ij}D_{iso}) 
+- (1-f)\exp(-\sum_{j=1}^{7}W_{ij}\gamma_{j})\right ]^{2}$$ {#eq:3}
 
 Similarly to the original article [@Hoy2014-lk,], the WLS procedure is only used here
 to obtain the intial guess for the free water elimination parameters, which were then
