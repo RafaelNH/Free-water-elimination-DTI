@@ -303,7 +303,7 @@ def _nls_jacobian_func(tensor_elements, design_matrix, data, Diso=3e-3,
 
 def nls_iter(design_matrix, sig, S0, Diso=3e-3, mdreg=2.7e-3,
              min_signal=1.0e-6, cholesky=False, f_transform=True,
-             jac=False):
+             jac=True):
     """ Applies non linear least squares fit of the water free elimination
     model to single voxel signals.
 
@@ -351,6 +351,10 @@ def nls_iter(design_matrix, sig, S0, Diso=3e-3, mdreg=2.7e-3,
            first, second and third coordinates of the eigenvector
         3) The volume fraction of the free water compartment.
     """
+    # Analyse compatible input cases
+    if jac is True and cholesky is True:
+        raise ValueError("Cholesky decomposition is not compatible with jac.")
+
     # Initial guess
     params = wls_iter(design_matrix, sig, S0,
                       min_signal=min_signal, Diso=Diso, mdreg=mdreg)
@@ -401,7 +405,7 @@ def nls_iter(design_matrix, sig, S0, Diso=3e-3, mdreg=2.7e-3,
 
 def nls_fit_tensor(gtab, data, mask=None, Diso=3e-3, mdreg=2.7e-3,
                    min_signal=1.0e-6, f_transform=True, cholesky=False,
-                   jac=False):
+                   jac=True):
     """
     Fit the water elimination tensor model using the non-linear least-squares.
 
@@ -545,7 +549,7 @@ def cholesky_to_lower_triangular(R):
 
 
 def nls_iter_bounds(design_matrix, sig, S0, Diso=3e-3, mdreg=2.7e-3,
-                    min_signal=1.0e-6, bounds=None, jac=False):
+                    min_signal=1.0e-6, bounds=None, jac=True):
     """ Applies non-linear least-squares fit with constraints of the water free
     elimination model to single voxel signals.
 
@@ -573,10 +577,10 @@ def nls_iter_bounds(design_matrix, sig, S0, Diso=3e-3, mdreg=2.7e-3,
         The minimum signal value. Needs to be a strictly positive
         number.
     bounds : 2-tuple of arrays with 14 elements, optional
-        Lower and upper bounds on fwdti model variables and the non-diffusion
-        signal S0. Use np.inf with an appropriate sign to disable bounds on all
-        or some variables. When bounds is set to None the following default
-        variable bounds is used:
+        Lower and upper bounds on fwdti model variables and the log of
+        non-diffusion signal S0. Use np.inf with an appropriate sign to
+        disable bounds on all or some variables. When bounds is set to None
+        the following default variable bounds is used:
             ([0., -Diso, 0., -Diso, -Diso, 0., 0., np.exp(-10.)],
              [Diso, Diso, Diso, Diso, Diso, Diso, 1., np.exp(10.)])
     jac : bool
@@ -645,7 +649,7 @@ def nls_iter_bounds(design_matrix, sig, S0, Diso=3e-3, mdreg=2.7e-3,
 
 
 def nls_fit_tensor_bounds(gtab, data, mask=None, Diso=3e-3, mdreg=2.7e-3,
-                          min_signal=1.0e-6, bounds=None, jac=False):
+                          min_signal=1.0e-6, bounds=None, jac=True):
     """
     Fit the water elimination tensor model using the non-linear least-squares
     with constraints
@@ -673,10 +677,10 @@ def nls_fit_tensor_bounds(gtab, data, mask=None, Diso=3e-3, mdreg=2.7e-3,
         The minimum signal value. Needs to be a strictly positive
         number. Default: 1.0e-6.
     bounds : 2-tuple of arrays with 14 elements, optional
-        Lower and upper bounds on fwdti model variables and the non-diffusion
-        signal S0. Use np.inf with an appropriate sign to disable bounds on all
-        or some variables. When bounds is set to None the following default
-        variable bounds is used:
+        Lower and upper bounds on fwdti model variables and the log of
+        non-diffusion signal S0. Use np.inf with an appropriate sign to
+        disable bounds on all or some variables. When bounds is set to None
+        the following default variable bounds is used:
             ([0., -Diso, 0., -Diso, -Diso, 0., 0., np.exp(-10.)],
              [Diso, Diso, Diso, Diso, Diso, Diso, 1., np.exp(10.)])
     jac : bool
