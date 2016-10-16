@@ -220,14 +220,16 @@ The bottom panels show the estimated volume fraction $f$ median and intra-quarti
 Fig.7 of the original article](fwdti_simulations.png) {#fig:simulations}
 
 In vivo tensor statistics obtained from the free water elimination and standard DTI models
-are shown in {#fig:invivo}. The free water elimination model seems to produce higher values of FA
-in general and lower values of MD relative to the metrics obtained from the standard DTI model.
-These differences in FA and MD estimates are expected due to the suppression of the free water
-isotropic diffusion of 3.0 \times 10^{-3} mm^{2}.s^{-1}. Unexpected
+are shown in {#fig:invivo}. Complete processing of all these measure took less than 1 hour
+in an average Desktop and Laptop PC (~2GHz processor speed), while the reported processing time
+by Hoy et al. was around 20hours. The free water elimination model seems to produce higher values
+of FA in general and lower values of MD relative to the metrics obtained from the standard DTI model.
+These differences in FA and MD estimates are expected due to the suppression
+of the free water isotropic diffusion of 3.0 \times 10^{-3} mm^{2}.s^{-1}. Unexpected
 high amplitudes of FA are however observed in the periventricular gray mater. As mentioned in the original article,
 this FA overestimation is related to the inflated values of FA in voxels with high $f$ values and
 can be mitigated by excluding voxels with high volume free water volume
-fraction estimates (see supplementary_notebook_3.ipynb).
+fraction estimates (see supplementary_notebook_3.ipynb). 
 
 ![Fig. 2 - In vivo diffusion measures obtained from the free water DTI and standard
    DTI. The values of FA for the free water DTI model, the standard DTI model and
@@ -249,7 +251,11 @@ what was reported by Hoy and Colleagues, the proposed procedures seem to generat
 biased values of FA for free water volume fractions near one. Nevertheless,
 our results confirm that these problematic cases correspond to regions that are not
 of interest in neuroimaging analysis (voxels associated with cerebral ventricles)
-and might be removed by excluding voxels with measured volume fractions above a reasonable 
+and might be removed by excluding voxels with measured volume fractions above a reasonable
 threshold such as 0.7.
+
+# Acknowledgments
+
+This work was funded by Fundação para a Ciência e Tecnologia FCT/MCE (PIDDAC) under grant SFRH/BD/80114/2012.
 
 # References
