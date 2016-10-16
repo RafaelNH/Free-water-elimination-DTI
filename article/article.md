@@ -52,7 +52,7 @@ DTI-based measures such as fractional anisotropy (FA) and mean diffusivity (MD)
 are normally used to assess properties of brain microstructure.
 
 For example, FA is thought to be an indicator of different microstructural properties:
-packing density of axons, and the density of myelin in nerve fibers [@beaulieu2002],
+packing density of axons, and the density of myelin in nerve fibers [@Beaulieu2002-tl],
 but also indicates white matter coherence -- the alignment of axons within a measurement voxel.
 However, because a measurement voxel can contain partial volumes of different
 types of tissue, these measures are not always specific to one particular type of tissue.
