@@ -52,7 +52,7 @@ DTI-based measures such as fractional anisotropy (FA) and mean diffusivity (MD)
 are normally used to assess properties of brain microstructure.
 
 For example, FA is thought to be an indicator of different microstructural properties:
-packing density of axons, and the density of myelin in nerve fibers [@beaulieu2002],
+packing density of axons, and the density of myelin in nerve fibers [@Beaulieu2002-tl],
 but also indicates white matter coherence -- the alignment of axons within a measurement voxel.
 However, because a measurement voxel can contain partial volumes of different
 types of tissue, these measures are not always specific to one particular type of tissue.
@@ -61,7 +61,7 @@ underestimated by partial volume effects of cerebral spinal fluid (CSF). To
 remove the influence of this free water diffusion contamination, the DTI model
 can be expanded to take into account the contributions of free water diffusion by representing
 the tissue compartments with an anisotropic diffusion tensor and the CSF compartment as an isotropic
-free water diffusion coefficient of 3.0 \times 10^{-3}  mm^{2}.s^{-1} . Recently, two procedures were
+free water diffusion coefficient of $3.0 \times 10^{-3}  mm^{2}.s^{-1}$. Recently, two procedures were
 proposed by Hoy and colleagues to fit this two compartment model to
 diffusion-weighted data acquired with two or more diffusion gradient-weightings [@Hoy2014-lk,].
 Although these procedures have been shown to provide diffusion based measures stable
@@ -71,7 +71,7 @@ training and without optimization for speed" [@Hoy2014-lk,]. In this work, we pr
 the first open-source reference implementation of the free water contamination DTI
 model. All implementations are made in Python based on the descriptions provided
 in Hoy et al.'s original article. For speed optimization, all necessary standard
-DT processing steps used previously optimized functions freely available with the software 
+DT processing steps used previously optimized functions freely available with the software
 package Diffusion Imaging in Python (Dipy, http://nipy.org/dipy/,  [@Garyfallidis2014-zo])
 and the optimization algorithms provided by the open-source software for mathematics,
 science, and engineering Scipy (http://scipy.org/).
@@ -106,7 +106,7 @@ of the model weights, when evaluating which ($f$, $D_tissue$) pair is associated
 with smaller residuals the NLS objective function is used instead:
 
 $$F_{NLS} = \frac{1}{2} \sum_{m}^{i=1} \left
- [s_{i} - S_{0} f\exp(-\sum_{j=2}^{4}W_{ij}D_{iso}) 
+ [s_{i} - S_{0} f\exp(-\sum_{j=2}^{4}W_{ij}D_{iso})
 - (1-f)\exp(-\sum_{j=1}^{7}W_{ij}\gamma_{j})\right ]^{2}$$ {#eq:3}
 
 Similarly to the original article [@Hoy2014-lk,], the WLS procedure is only used here
@@ -145,7 +145,7 @@ For cases where the ground truth free water volume fraction is one (i.e. voxels
 containing only free water), the tissue's diffusion tensor component can erroneously
 overfit the free water diffusion signal and erroneously induce estimates of
 the water volume fraction near to zero. To remove these problematic cases, for all voxels with
-standard DTI mean diffusivity values larger than 2.7 \times 10^{-3} mm^{2}.s^{-1}, the free
+standard DTI mean diffusivity values larger than $2.7 \times 10^{-3} mm^{2}.s^{-1}$, the free
 water volume fraction is set to one while all other diffusion tensor
 parameters are set to zero. This mean diffusivity threshold was arbitray adjusted to 90%
 of the theoretical free water diffusion value, however this can be adjusted by
@@ -163,13 +163,13 @@ which is also a dependency of both Scipy and Dipy.
 
 ## Simulations
 In their original study, Hoy and colleagues simulated a measurement along 32 diffusion
-direction with diffusion weighting b-values of 500 and 1500 s.mm^{-2} and with six b-value=0 images.
+direction with diffusion weighting b-values of 500 and 1500 $s.mm^{-2}$ and with six b-value=0 images.
 These simulations correspond to the results reported in Fig.5 of the original article.
 We conducted Monte Carlo simulations using the multi-tensor simulation
 module available in Dipy and using identical simulated acquisition parameters.
 As in the original article, fitting procedures are tested for voxels with five different FA values
 and with constant diffusion trace of $2.4 \times 10^{-3} mm^{2}.s^{-1}$.
-The eigenvalues used for the five FA levels are reported in @tbl:table.
+The eigenvalues used for the five FA levels are reported in Table @tbl:table.
 
 Table: Eigenvalues values used for the simulations {#tbl:table}
 
@@ -185,58 +185,56 @@ procedure, Rician noise with signal-to-noise ratio (SNR) of 40 relative to the b
 used. For each FA and f-value pair, simulations were performed for 120
 different diffusion tensor orientation. Simulations for each diffusion tensor
 orientation were repeated 100 times making a total of 12000 simulation
-iterations for each FA and f-value pair. 
+iterations for each FA and f-value pair.
 
 ## In vivo data
 
-Similarly to the original article, the procedures are also tested using in vivo human brain data.
-The dataset used here was kindly supplied by Valabregue Romain, CENIR, ICM, Paris
-(https://digital.lib.washington.edu/researchworks/handle/1773/33311) and can be automatically
+Similarly to the original article, the procedures are also tested using in vivo human brain data [@valabregue2015], that can be automatically
 downloaded by Dipy's functions. The original dataset consisted of 74 volumes of images acquired for a
-b-value of 0 s.mm^{-2} and 578 volumes diffusion weighted images acquired along 16 diffusion gradient directions
-for b-values of 200 and 400 s.mm^{-2} and along 182 diffusion gradient directions for b-values
-of 1000, 2000 and 3000 s.mm^{-2}. In this study, only the data for b-values up to 2000 $s.mm^{-2}
+b-value of $0 s.mm^{-2}$ and 578 volumes diffusion weighted images acquired along 16 diffusion gradient directions
+for b-values of 200 and 400 $s.mm^{-2}$ and along 182 diffusion gradient directions for b-values
+of 1000, 2000 and 3000 $s.mm^{-2}$. In this study, only the data for b-values up to $2000 $s.mm^{-2}$
 are used to decrease the impact of non-Gaussian diffusion effects which are not
-taken into account by the free water elimination model _[Hoy2014]. In addition to the free water
+taken into account by the free water elimination model [@Hoy2014-lk]. In addition to the free water
 elimination model, we also process the data using the standard DTI tensor model for comparison purposes
 (this model is already implemented in Dipy).
 
 # Results
 
-The results from the Monte Carlo simulations are shown in @fig:simulations. Similarly to what is reported
+The results from the Monte Carlo simulations are shown in Figure @fig:simulations. Similarly to what is reported
 in the original article, FA values estimated using the free water elimination model match the tissue's ground truth
 values for free water volume fractions $f$ ranging around 0 to 0.7 (top panel of
-@fig:simulations). However, FA values seem to be overestimated for higher volume fractions. This bias is more
+Figure @fig:simulations). However, FA values seem to be overestimated for higher volume fractions. This bias is more
 prominent for lower FA values in which overestimations are visible from lower free water volume
-fractions. The lower panels of @fig:simulations suggest that the free water elimination model produce
+fractions. The lower panels of Figure @fig:simulations suggest that the free water elimination model produce
 accurate free water volume fraction for the full range of volume fraction ground truth values. All the features observed
 here are consistent with Fig.5 of the original article.
 
-![Fig.1 - Fractional Anisotropy (FA) and free water volume fraction ($f$) estimates obtained with the from the Monte Carlo simulations 
+![Fig.1 - Fractional Anisotropy (FA) and free water volume fraction ($f$) estimates obtained with the from the Monte Carlo simulations
 using the free water elimination fitting procedures. The top panel shows the FA median and intra-quartil range
 for the five different FA ground truth levels and plotted as function of the ground truth water volume fraction.
 The bottom panels show the estimated volume fraction $f$ median and intra-quartil range as function of its ground truth values
 (right and left panels correspond to the higher and lower FA values, respectively). This figure reproduces
-Fig.7 of the original article](fwdti_simulations.png) {#fig:simulations}
+Fig.7 of the original article](fwdti_simulations.png){#fig:simulations}
 
 In vivo tensor statistics obtained from the free water elimination and standard DTI models
-are shown in {#fig:invivo}. Complete processing of all these measure took less than 1 hour
+are shown in Figure @fig:invivo. Complete processing of all these measure took less than 1 hour
 in an average Desktop and Laptop PC (~2GHz processor speed), while the reported processing time
 by Hoy et al. was around 20hours. The free water elimination model seems to produce higher values
 of FA in general and lower values of MD relative to the metrics obtained from the standard DTI model.
 These differences in FA and MD estimates are expected due to the suppression
-of the free water isotropic diffusion of 3.0 \times 10^{-3} mm^{2}.s^{-1}. Unexpected
+of the free water isotropic diffusion of $3.0 \times 10^{-3} mm^{2}.s^{-1}$. Unexpected
 high amplitudes of FA are however observed in the periventricular gray mater. As mentioned in the original article,
 this FA overestimation is related to the inflated values of FA in voxels with high $f$ values and
 can be mitigated by excluding voxels with high volume free water volume
-fraction estimates (see supplementary_notebook_3.ipynb). 
+fraction estimates (see supplementary_notebook_3.ipynb).
 
 ![Fig. 2 - In vivo diffusion measures obtained from the free water DTI and standard
    DTI. The values of FA for the free water DTI model, the standard DTI model and
    their difference are shown in the top panels (A-C),
    while respective MD values are shown in the bottom panels (D-F). In addition
    the free water volume fraction estimated from the free water DTI model is shown in
-   panel G](In_vivo_free_water_DTI_and_standard_DTI_measures.png) {#fig:invivo}
+   panel G](In_vivo_free_water_DTI_and_standard_DTI_measures.png){#fig:invivo}
 
 
 # Conclusion
@@ -257,5 +255,10 @@ threshold such as 0.7.
 # Acknowledgments
 
 This work was funded by Fundação para a Ciência e Tecnologia FCT/MCE (PIDDAC) under grant SFRH/BD/80114/2012.
+
+Ariel Rokem was funded through a grant from the Gordon \& Betty Moore Foundation and the Alfred P. Sloan Foundation to the University of Washington eScience Institute.
+
+Thanks to Romain Valabregue, CENIR, Paris for providing the data used here.
+
 
 # References
