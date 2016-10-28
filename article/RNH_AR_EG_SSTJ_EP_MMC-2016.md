@@ -1,17 +1,29 @@
----
+﻿---
 Title: "Re: Optimization of a free water elimination two-compartment model for diffusion tensor imaging."
 Author:
   - name: Rafael Neto Henriques
     affiliation: 1
   - name: Ariel Rokem
     affiliation: 2
+  - name: Eleftherios Garyfallidis
+    affiliation: 3
+  - name: Samuel St-Jean
+    affiliation: 4
+  - name: Eric Peterson
+    affiliation: 5
   - name: Marta Morgado Correia
     affiliation: 1
 Address:
   - code:    1
-    address: MRC, Cognition and Brain Sciences Unit, Cambridge, Cambridgeshire, UK
+    address: MRC Cognition and Brain Sciences Unit, Cambridge, Cambridgeshire, UK
   - code:    2
     address: The University of Washington eScience Institute, Seattle, WA, USA
+  - code: 3
+    address: Indiana University School of Informatics and Computing, Indiana, IA, USA
+  - code: 4
+    address: University Medical Center Utrecht, Utrecht, NL
+  - code: 5
+    address: Center for Health Sciences, SRI Biosciences, CA, USA
 Contact:
   - rafaelnh21@gmail.com
 Editor:
@@ -37,7 +49,7 @@ Optimization of a free water elimination two-compartment model for diffusion
 tensor imaging. NeuroImage 103, 323-333. doi: 10.1016/j.neuroimage.2014.09.053
 "
 Bibliography:
-  article.bib
+  bibliography.bib
 
 ---
 
@@ -49,9 +61,7 @@ microstructure in vivo. Diffusion tensor imaging (DTI), one of the most
 commonly used DW-MRI techniques, models diffusion anisotropy of tissues using a
 second-order tensor known as the diffusion tensor (DT) [@Basser1994-zd], [@Basser1994-hg].
 DTI-based measures such as fractional anisotropy (FA) and mean diffusivity (MD)
-are normally used to assess properties of brain microstructure.
-
-For example, FA is thought to be an indicator of different microstructural properties:
+are normally used to assess properties of brain microstructure. For example, FA is thought to be an indicator of different microstructural properties:
 packing density of axons, and the density of myelin in nerve fibers [@Beaulieu2002-tl],
 but also indicates white matter coherence -- the alignment of axons within a measurement voxel.
 However, because a measurement voxel can contain partial volumes of different
@@ -139,9 +149,7 @@ decomposition of the diffusion tensor to ensure that this is a positive definite
 is not used by default and it is not compatible with the analytical jacobian
 derivation.
 
-**Removing problematic estimates**
-
-For cases where the ground truth free water volume fraction is one (i.e. voxels
+**Removing problematic estimates** For cases where the ground truth free water volume fraction is one (i.e. voxels
 containing only free water), the tissue's diffusion tensor component can erroneously
 overfit the free water diffusion signal and erroneously induce estimates of
 the water volume fraction near to zero. To remove these problematic cases, for all voxels with
@@ -210,7 +218,7 @@ fractions. The lower panels of Figure @fig:simulations suggest that the free wat
 accurate free water volume fraction for the full range of volume fraction ground truth values. All the features observed
 here are consistent with Fig.5 of the original article.
 
-![Fig.1 - Fractional Anisotropy (FA) and free water volume fraction ($f$) estimates obtained with the from the Monte Carlo simulations
+![Fractional Anisotropy (FA) and free water volume fraction ($f$) estimates obtained with the from the Monte Carlo simulations
 using the free water elimination fitting procedures. The top panel shows the FA median and intra-quartil range
 for the five different FA ground truth levels and plotted as function of the ground truth water volume fraction.
 The bottom panels show the estimated volume fraction $f$ median and intra-quartil range as function of its ground truth values
@@ -229,7 +237,7 @@ this FA overestimation is related to the inflated values of FA in voxels with hi
 can be mitigated by excluding voxels with high volume free water volume
 fraction estimates (see supplementary_notebook_3.ipynb).
 
-![Fig. 2 - In vivo diffusion measures obtained from the free water DTI and standard
+![In vivo diffusion measures obtained from the free water DTI and standard
    DTI. The values of FA for the free water DTI model, the standard DTI model and
    their difference are shown in the top panels (A-C),
    while respective MD values are shown in the bottom panels (D-F). In addition
@@ -252,9 +260,27 @@ of interest in neuroimaging analysis (voxels associated with cerebral ventricles
 and might be removed by excluding voxels with measured volume fractions above a reasonable
 threshold such as 0.7.
 
+# Author Contributions
+
+Conceptualization: RNH, AR, MMC.
+Data Curation: RNH, AR, EG, SSTJ.
+Formal Analysis: RNH. 
+Funding Acquisition: RNH, AR.
+Investigation: RNH.
+Methodology: RNH, AR, EG.
+Project Administration: RNH, MMC, AR, EG.
+Resources: RNH, MMC, AR.
+Software: RNH, AR, EP, EF, SSTJ.
+Supervision: MMC, AR.
+Validation: AR, SSTJ, EG.
+Visualization: RNH.
+Writing - Original Draft Preparation: RNH.
+Writing - Review & Editing: AR, MMC.
+
+
 # Acknowledgments
 
-This work was funded by Fundação para a Ciência e Tecnologia FCT/MCE (PIDDAC) under grant SFRH/BD/80114/2012.
+Rafael Neto Henriques was funded by Fundação para a Ciência e Tecnologia FCT/MCE (PIDDAC) under grant SFRH/BD/80114/2012.
 
 Ariel Rokem was funded through a grant from the Gordon \& Betty Moore Foundation and the Alfred P. Sloan Foundation to the University of Washington eScience Institute.
 
