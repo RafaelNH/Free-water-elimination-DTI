@@ -1,17 +1,29 @@
----
+﻿---
 Title: "Re: Optimization of a free water elimination two-compartment model for diffusion tensor imaging."
 Author:
   - name: Rafael Neto Henriques
     affiliation: 1
   - name: Ariel Rokem
     affiliation: 2
+  - name: Eleftherios Garyfallidis
+    affiliation: 3
+  - name: Samuel St-Jean
+    affiliation: 4
+  - name: Eric Peterson
+    affiliation: 5
   - name: Marta Morgado Correia
     affiliation: 1
 Address:
   - code:    1
-    address: MRC, Cognition and Brain Sciences Unit, Cambridge, Cambridgeshire, UK
+    address: MRC Cognition and Brain Sciences Unit, Cambridge, Cambridgeshire, UK
   - code:    2
     address: The University of Washington eScience Institute, Seattle, WA, USA
+  - code: 3
+    address: Indiana University School of Informatics and Computing, Indiana, IA, USA
+  - code: 4
+    address: University Medical Center Utrecht, Utrecht, NL
+  - code: 5
+    address: Center for Health Sciences, SRI Biosciences, CA, USA
 Contact:
   - rafaelnh21@gmail.com
 Editor:
@@ -252,9 +264,27 @@ of interest in neuroimaging analysis (voxels associated with cerebral ventricles
 and might be removed by excluding voxels with measured volume fractions above a reasonable
 threshold such as 0.7.
 
+# Author Contributions
+
+Conceptualization: RNH, AR, MMC.
+Data Curation: RNH, AR, EG, SSTJ.
+Formal Analysis: RNH. 
+Funding Acquisition: RNH, AR.
+Investigation: RNH.
+Methodology: RNH, AR, EG.
+Project Administration: RNH, MMC, AR, EG.
+Resources: RNH, MMC, AR.
+Software: RNH, AR, EP, EF, SSTJ.
+Supervision: MMC, AR.
+Validation: AR, SSTJ, EG.
+Visualization: RNH.
+Writing - Original Draft Preparation: RNH.
+Writing - Review & Editing: AR, MMC.
+
+
 # Acknowledgments
 
-This work was funded by Fundação para a Ciência e Tecnologia FCT/MCE (PIDDAC) under grant SFRH/BD/80114/2012.
+Rafael Neto Henriques was funded by Fundação para a Ciência e Tecnologia FCT/MCE (PIDDAC) under grant SFRH/BD/80114/2012.
 
 Ariel Rokem was funded through a grant from the Gordon \& Betty Moore Foundation and the Alfred P. Sloan Foundation to the University of Washington eScience Institute.
 
