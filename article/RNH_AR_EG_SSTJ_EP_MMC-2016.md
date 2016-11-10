@@ -9,7 +9,7 @@ Author:
     affiliation: 3
   - name: Samuel St-Jean
     affiliation: 4
-  - name: Eric Peterson
+  - name: Eric Thomas Peterson
     affiliation: 5
   - name: Marta Morgado Correia
     affiliation: 1
@@ -23,7 +23,7 @@ Address:
   - code: 4
     address: University Medical Center Utrecht, Utrecht, NL
   - code: 5
-    address: Center for Health Sciences, SRI Biosciences, CA, USA
+    address: Biosceinces, SRI International, Menlo Park, CA, USA
 Contact:
   - rafaelnh21@gmail.com
 Editor:
@@ -55,27 +55,27 @@ Bibliography:
 
 # Introduction
 
-Diffusion-weighted Magnetic Resonance Imaging (DW-MRI) is a non-invasive
-biomedical imaging technique that allows us to infer properties of brain tissue
-microstructure in vivo. Diffusion tensor imaging (DTI), one of the most
-commonly used DW-MRI techniques, models diffusion anisotropy of tissues using a
+Diffusion-weighted Magnetic Resonance Imaging (DW-MRI) is a
+biomedical imaging technique that allows the non-invasive acquisition of in vivo data
+from which tissue microstructure can be inferred. Diffusion tensor imaging (DTI), one of the most
+commonly used DW-MRI techniques in the brain, models diffusion anisotropy of tissues using a
 second-order tensor known as the diffusion tensor (DT) [@Basser1994-zd], [@Basser1994-hg].
 DTI-based measures such as fractional anisotropy (FA) and mean diffusivity (MD)
 are normally used to assess properties of brain microstructure. For example, FA is thought to be an indicator of different microstructural properties:
 packing density of axons, and the density of myelin in nerve fibers [@Beaulieu2002-tl],
 but also indicates white matter coherence -- the alignment of axons within a measurement voxel.
-However, because a measurement voxel can contain partial volumes of different
-types of tissue, these measures are not always specific to one particular type of tissue.
-For example, diffusion anisotropy in regions near cerebral ventricle and parenchyma can be
+However, because a measurement region can contain multiple
+types of tissue, these measures are not always specific to one particular type, an effect called partial voluming.
+For example, diffusion anisotropy in regions near the cerebral ventricle and parenchyma can be
 underestimated by partial volume effects of cerebral spinal fluid (CSF). To
-remove the influence of this free water diffusion contamination, the DTI model
-can be expanded to take into account the contributions of free water diffusion by representing
+remove the influence of the freely diffusing CSF which is not typically of interest, the DTI model
+can be expanded to separately take into account the contributions tissue and CSF by representing
 the tissue compartments with an anisotropic diffusion tensor and the CSF compartment as an isotropic
 free water diffusion coefficient of $3.0 \times 10^{-3}  mm^{2}.s^{-1}$. Recently, two procedures were
 proposed by Hoy and colleagues to fit this two compartment model to
 diffusion-weighted data acquired with two or more diffusion gradient-weightings [@Hoy2014-lk,].
 Although these procedures have been shown to provide diffusion based measures stable
-to different free water contamination degrees, the authors mentioned that their
+to different degrees of free water contamination, the authors noted that their
 original algorithms were "implemented by a group member with no formal programming
 training and without optimization for speed" [@Hoy2014-lk,]. In this work, we provide
 the first open-source reference implementation of the free water contamination DTI
@@ -125,11 +125,11 @@ used to initialize the non-linear convergence procedure (see below).
 
 **Non-Linear Least Square Solution (NLS)**. As suggested by Hoy and colleagues
 [@Hoy2014-lk,], the initial guess for the non-linear convergence
-procedure was set to the values estimated from the WLS approach. To improve the speed of
-computation, instead of using the modified Newton's algorithm proposed in the original article,
+procedure was set to the values estimated from the WLS approach. To improve the computation speed,
+instead of using the modified Newton's algorithm proposed in the original article,
 the non-linear convergence was done using Scipy's wrapped modified Levenberg-Marquardt algorithm
 (function `scipy.optimize.leastsq` of Scipy http://scipy.org/). To constrain the
-model parameters to within a plausible range, the free water volume fraction $f$ was
+model parameters to within a plysically plausible range [0-1], the free water volume fraction $f$ was
 converted to $f_t = \arcsin (2f-1) + \pi / 2$. To compare the robustness of the
 techniques with and without this constraint, the free water volume fraction transformation was implemented
 as an optional feature that can be controlled through user-provided arguments. In addition to
@@ -140,8 +140,8 @@ constraints in a similar fashion to what is done in the original article, howeve
 our experiments showed that this procedure does not overcome the performance of
 `scipy.optimize.leastsq` in terms of accuracy, and requires more computing time
 (see supplementary_notebook_1.ipynb for more details). To speed up the
-performance of the non-linear optimization procedure, the free water elimination DTI model
-jacobian was analytically derived and incorporated in the non-linear procedure (for details
+performance of the non-linear optimization procedure, the jacobian of the free water elimination DTI model
+was analytically derived and incorporated in the non-linear procedure (for details
 of the jacobian derivation see supplementary_notebook_2.ipynb). As an expansion of
 the work done by Hoy and colleagues, we also allow users to use the Cholesky
 decomposition of the diffusion tensor to ensure that this is a positive definite tensor
@@ -149,10 +149,11 @@ decomposition of the diffusion tensor to ensure that this is a positive definite
 is not used by default and it is not compatible with the analytical jacobian
 derivation.
 
-**Removing problematic estimates** For cases where the ground truth free water volume fraction is one (i.e. voxels
-containing only free water), the tissue's diffusion tensor component can erroneously
-overfit the free water diffusion signal and erroneously induce estimates of
-the water volume fraction near to zero. To remove these problematic cases, for all voxels with
+**Removing problematic estimates** For cases where the ground truth free water volume fraction is 1 (i.e. voxels
+containing only free water), the tissue's diffusion tensor component can erroneously fit
+the free water diffusion signal rather than placing the free water signal in the free water compartment,
+and therefore incorrectly estimate the water volume fraction close to 0 rather than 1.
+To remove these problematic cases, for all voxels with
 standard DTI mean diffusivity values larger than $2.7 \times 10^{-3} mm^{2}.s^{-1}$, the free
 water volume fraction is set to one while all other diffusion tensor
 parameters are set to zero. This mean diffusivity threshold was arbitray adjusted to 90%
@@ -172,7 +173,7 @@ which is also a dependency of both Scipy and Dipy.
 ## Simulations
 In their original study, Hoy and colleagues simulated a measurement along 32 diffusion
 direction with diffusion weighting b-values of 500 and 1500 $s.mm^{-2}$ and with six b-value=0 images.
-These simulations correspond to the results reported in Fig.5 of the original article.
+These simulations correspond to the results reported in Fig. 5 of the original article.
 We conducted Monte Carlo simulations using the multi-tensor simulation
 module available in Dipy and using identical simulated acquisition parameters.
 As in the original article, fitting procedures are tested for voxels with five different FA values
@@ -189,7 +190,7 @@ $\lambda_3$  $8.00 \times 10^{-4}$  $7.38 \times 10^{-4}$  $6.75 \times 10^{-4}$
 
 For each FA value, eleven different degrees of free water contamination were
 evaluated (f values equally spaced from 0 to 1). To assess the robustness of the
-procedure, Rician noise with signal-to-noise ratio (SNR) of 40 relative to the b-value = 0 images was
+procedure, Rician noise with signal-to-noise ratio (SNR) of 40 relative to the b-value=0 images was
 used. For each FA and f-value pair, simulations were performed for 120
 different diffusion tensor orientation. Simulations for each diffusion tensor
 orientation were repeated 100 times making a total of 12000 simulation
@@ -203,9 +204,8 @@ b-value of $0 s.mm^{-2}$ and 578 volumes diffusion weighted images acquired alon
 for b-values of 200 and 400 $s.mm^{-2}$ and along 182 diffusion gradient directions for b-values
 of 1000, 2000 and 3000 $s.mm^{-2}$. In this study, only the data for b-values up to $2000 $s.mm^{-2}$
 are used to decrease the impact of non-Gaussian diffusion effects which are not
-taken into account by the free water elimination model [@Hoy2014-lk]. In addition to the free water
-elimination model, we also process the data using the standard DTI tensor model for comparison purposes
-(this model is already implemented in Dipy).
+taken into account by the free water elimination model. We also processed the data with the standard DTI tensor model
+(as implemented in Dipy) in order to compare the results with the free water elimination model.
 
 # Results
 
@@ -216,25 +216,25 @@ Figure @fig:simulations). However, FA values seem to be overestimated for higher
 prominent for lower FA values in which overestimations are visible from lower free water volume
 fractions. The lower panels of Figure @fig:simulations suggest that the free water elimination model produce
 accurate free water volume fraction for the full range of volume fraction ground truth values. All the features observed
-here are consistent with Fig.5 of the original article.
+here are consistent with Fig. 5 of the original article.
 
-![Fractional Anisotropy (FA) and free water volume fraction ($f$) estimates obtained with the from the Monte Carlo simulations
-using the free water elimination fitting procedures. The top panel shows the FA median and intra-quartil range
-for the five different FA ground truth levels and plotted as function of the ground truth water volume fraction.
-The bottom panels show the estimated volume fraction $f$ median and intra-quartil range as function of its ground truth values
+![Fractional Anisotropy (FA) and free water volume fraction ($f$) estimates obtained from the Monte Carlo simulations
+using the free water elimination fitting procedures. The top panel shows the FA median and intra-quartile range
+for the five different FA ground truth levels and plotted as a function of the ground truth water volume fraction.
+The bottom panels show the estimated volume fraction $f$ median and intra-quartile range as a function of its ground truth values
 (right and left panels correspond to the higher and lower FA values, respectively). This figure reproduces
-Fig.7 of the original article](fwdti_simulations.png){#fig:simulations}
+Fig. 7 of the original article.](fwdti_simulations.png){#fig:simulations}
 
 In vivo tensor statistics obtained from the free water elimination and standard DTI models
 are shown in Figure @fig:invivo. Complete processing of all these measure took less than 1 hour
 in an average Desktop and Laptop PC (~2GHz processor speed), while the reported processing time
-by Hoy et al. was around 20hours. The free water elimination model seems to produce higher values
+by Hoy et al. was around 20 hours. The free water elimination model seems to produce higher values
 of FA in general and lower values of MD relative to the metrics obtained from the standard DTI model.
 These differences in FA and MD estimates are expected due to the suppression
-of the free water isotropic diffusion of $3.0 \times 10^{-3} mm^{2}.s^{-1}$. Unexpected
-high amplitudes of FA are however observed in the periventricular gray mater. As mentioned in the original article,
+of the isotropic diffusion of free water. However, unexpectedly
+high amplitudes of FA are observed in the periventricular gray mater. As mentioned in the original article,
 this FA overestimation is related to the inflated values of FA in voxels with high $f$ values and
-can be mitigated by excluding voxels with high volume free water volume
+can be mitigated by excluding voxels with high free water volume
 fraction estimates (see supplementary_notebook_3.ipynb).
 
 ![In vivo diffusion measures obtained from the free water DTI and standard
@@ -242,20 +242,20 @@ fraction estimates (see supplementary_notebook_3.ipynb).
    their difference are shown in the top panels (A-C),
    while respective MD values are shown in the bottom panels (D-F). In addition
    the free water volume fraction estimated from the free water DTI model is shown in
-   panel G](In_vivo_free_water_DTI_and_standard_DTI_measures.png){#fig:invivo}
+   panel G.](In_vivo_free_water_DTI_and_standard_DTI_measures.png){#fig:invivo}
 
 
 # Conclusion
 
-Despite the changes done to improve the algorithms speed performance, the
+Despite the changes done to reduce the algorithm's execution time, the
 implemented procedures to solve the free water elimination DTI model have comparable performance
 in terms of accuracy to the original methods described by Hoy and colleagues [@Hoy2014-lk].
 Based on similar Monte Carlo simulations with the same SNR used in the original article,
 our results confirmed that the free water elimination DTI model is able to remove confounding effects
 of fast diffusion for typical FA values of brain white matter. Similarly to
-what was reported by Hoy and Colleagues, the proposed procedures seem to generate
-biased values of FA for free water volume fractions near one. Nevertheless,
-our results confirm that these problematic cases correspond to regions that are not
+what was reported by Hoy and colleagues, the proposed procedures seem to generate
+biased values of FA for free water volume fractions near 1. Nevertheless,
+our results confirm that these problematic cases correspond to regions that are not typically
 of interest in neuroimaging analysis (voxels associated with cerebral ventricles)
 and might be removed by excluding voxels with measured volume fractions above a reasonable
 threshold such as 0.7.
@@ -270,7 +270,7 @@ Investigation: RNH.
 Methodology: RNH, AR, EG.
 Project Administration: RNH, MMC, AR, EG.
 Resources: RNH, MMC, AR.
-Software: RNH, AR, EP, EF, SSTJ.
+Software: RNH, AR, ETP, EF, SSTJ.
 Supervision: MMC, AR.
 Validation: AR, SSTJ, EG.
 Visualization: RNH.
