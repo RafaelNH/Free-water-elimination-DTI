@@ -56,28 +56,28 @@ Bibliography:
 # Introduction
 
 Diffusion-weighted Magnetic Resonance Imaging (DW-MRI)  is a
-biomedical imaging technique that allows the non-invasive acquisition of *in vivo* data
+biomedical imaging technique that allows for the non-invasive acquisition of *in vivo* data
 from which tissue microstructure can be inferred. Diffusion tensor imaging (DTI), one of the most
 commonly used DW-MRI techniques in the brain, models diffusion anisotropy of tissues using a
 second-order tensor known as the diffusion tensor (DT) [@Basser1994-hg], [@Basser1994-zd].
 
 DTI-based measures such as fractional anisotropy (FA) and mean diffusivity (MD)
 are usually used to assess properties of brain microstructure. For example,
-FA is thought to be an indicator of different microstructural properties:
-packing density of axons, and the density of myelin in nerve fibers [@Beaulieu2002-tl],
-but also indicates white matter coherence -- the alignment of axons within a measurement voxel.
+FA is thought to be an indicator of different microstructural properties
+(such as packing density of axons, and density of myelin in nerve fibers [@Beaulieu2002-tl]),
+but also indicates white matter coherence (i.e. the alignment of axons within a measurement voxel).
 However, because a measurement voxel can contain partial volumes of different 
 types of tissue, these measures are not always specific to one particular type of tissue.
-Particularly, tissue's diffusion anisotropy in image voxels near cerebral ventricle and parenchyma can be
+In Particular, diffusion anisotropy in image voxels near cerebral ventricle and parenchyma can be
 underestimated by partial volume effects of cerebral spinal fluid (CSF).
 
 To remove the influence of the freely diffusing CSF and quantify changes that are specifically related to brain tissue, the DTI model
 can be extended to separately take into account the contributions of tissue and CSF by representing
-the tissue compartments with an anisotropic diffusion tensor and the CSF compartment as an isotropic
+the tissue compartment with an anisotropic diffusion tensor and the CSF compartment as an isotropic
 free water diffusion coefficient. Recently, two procedures were
 proposed by Hoy and colleagues to fit this two compartment model to
 diffusion-weighted data acquired with two or more diffusion gradient-weightings [@Hoy2014-lk,].
-Although these procedures have been shown to provide diffusion based measures, which are stable
+Although these procedures have been shown to provide diffusion based measures which are stable
 to different degrees of free water contamination, the authors noted that their
 original algorithms were "implemented by a group member with no formal programming
 training and without optimization for speed" [@Hoy2014-lk].
@@ -121,8 +121,8 @@ of the free-water elimination model:
 
 $$\gamma = (W^TS^2W)^{-1}W^{T}S^{2}y$$ {#eq:4} where $\gamma$ contains the fwDTI model parameters
 $\gamma=[D_{xx},D_{xy},D_{yy},D_{xz},D_{yz},D_{zz},\ln(s_0)]$,
-$y$ is a matrix containing the elements of $y_ik$ computed from equation 2,
-$S$ is a diagonal matrix with diagonal set to the $s_i$ samples, and W is a matrix
+$y$ is a matrix containing the elements of $y_{ik}$ computed from equation 2,
+$S$ is a diagonal matrix with diagonal set to the $s_i$ samples, and $W$ is a matrix
 computed from the $m$ number of diffusion-weighted directions $g_i$ and b-values:
 
 $$
@@ -134,7 +134,7 @@ W =
 \end{bmatrix}
 $$ {#eq:5}
 
-Thirdly, to ensure that the WLS method converges to the local minimum, $f$ grid search sampling is performed 
+To ensure that the WLS method converges to the local minimum, $f$ grid search sampling is performed 
 over larger interval ranges relative to original article. Particularly, for the second and third iterations used
 to refine the parameters precision, $f$ are here resampled over intervals of 0.2 and 0.02 instead of interval
 sizes of 0.1 and 0.01 proposed by Hoy and colleagues. On the other hand, the sample step size was maintain to
@@ -160,12 +160,12 @@ used to initialize a fwDTI model non-linear convergence solver (see below).
 the non-linear convergence was done using Scipy's wrapped modified Levenberg-Marquardt algorithm
 (function `scipy.optimize.leastsq` of [Scipy](http://scipy.org/)).
 
-To constrain the model parameters to within a plausible ranges, some variable transformations
+To constrain the model parameters to within plausible ranges, some variable transformations
 can be applied to the non-linear objective function. These were implemented as optional features
 that can be controlled through user-provided arguments. To restrict the range of the volume fraction
 to values between 0 and 1, the variable $f$ in equation 7 can be replaced by $\sin(f_t - \pi/2)/2+1/2$
-and non-linear convergence is performed as function of $f_t$. To ensure that the diffusion tensor is
-positive definite, diffusion parameters can be converted to the Cholesky decomposition elements according [@Koay2006-zo].
+and non-linear convergence is performed as a function of $f_t$. To ensure that the diffusion tensor is
+positive definite, diffusion parameters can be converted to the Cholesky decomposition elements as described in [@Koay2006-zo].
 
 In addition to the `scipy.optimize.leastsq` function, a more recently implemented version of Scipy's
 optimization function `scipy.optimize.least_square` (available as of Scipy's version 0.17) was also tested.
@@ -223,8 +223,8 @@ For each FA value, eleven different degrees of free water contamination were
 evaluated (f values equally spaced from 0 to 1). To assess the robustness of the
 procedure, Rician noise with signal-to-noise ratio (SNR) of 40 relative to the b-value=0 images was
 used. For each FA and f-value pair, simulations were performed for 120
-different diffusion tensor orientation. Simulations for each diffusion tensor
-orientation were repeated 100 times making a total of 12000 simulation
+different diffusion tensor orientations. Simulations for each diffusion tensor
+orientation were repeated 100 times making a total of 12000 simulated
 iterations for each FA and f-value pair.
 
 ## *In vivo* data
@@ -234,7 +234,7 @@ that can be automatically downloaded by Dipy's functions (see run_invivo_data.py
 The original dataset consisted of 74 volumes of images acquired for a
 b-value of $0 s.mm^{-2}$ and 578 volumes diffusion weighted images acquired along 16 diffusion gradient directions
 for b-values of 200 and 400 $s.mm^{-2}$ and along 182 diffusion gradient directions for b-values
-of 1000, 2000 and 3000 $s.mm^{-2}$. In this study, only the data for b-values up to $2000 $s.mm^{-2}$
+of 1000, 2000 and 3000 $s.mm^{-2}$. In this study, only the data for b-values up to 2000 $s.mm^{-2}$
 are used to decrease the impact of non-Gaussian diffusion effects which are not
 taken into account by the free water elimination model. We also processed the data with the standard DTI tensor model
 (as implemented in Dipy) in order to compare the results with the free water elimination model.
@@ -246,9 +246,9 @@ in the original article, FA values estimated using the free water elimination mo
 values for free water volume fractions $f$ ranging around 0 to 0.7 (top panel of
 Figure @fig:simulations). However, FA values seem to be overestimated for higher volume fractions. This bias is more
 prominent for lower FA values in which overestimations are visible from lower free water volume
-fractions. The lower panels of Figure @fig:simulations suggest that the free water elimination model produce
+fractions. The lower panels of Figure @fig:simulations suggest that the free water elimination model produces
 accurate free water volume fraction for the full range of volume fraction ground truth values. All the features observed
-here are consistent with Fig. 5 of the original article.
+here are consistent with Figure 5 of the original article.
 
 ![Fractional Anisotropy (FA) and free water volume fraction ($f$) estimates obtained with the from the Monte Carlo simulations
 using the free water elimination fitting procedures. The top panel shows the FA median and interquartile range
@@ -259,7 +259,7 @@ Fig. 7 of the original article.](fwdti_simulations.png){#fig:simulations}
 
 *In vivo* tensor statistics obtained from the free water elimination and standard DTI models
 are shown in Figure @fig:invivo. Complete processing of all these measure took less than 1 hour
-in an average Desktop and Laptop PC (~2GHz processor speed), while the reported processing time
+on an average Desktop and Laptop PC (~2GHz processor speed), while the reported processing time
 by Hoy et al. was around 20 hours. The free water elimination model seems to produce higher values
 of FA in general and lower values of MD relative to the metrics obtained from the standard DTI model.
 These differences in FA and MD estimates are expected due to the suppression
