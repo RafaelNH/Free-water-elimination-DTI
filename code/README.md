@@ -1,14 +1,32 @@
-### Code repository
+### Important
 
-functions.py - cotaining all reference implementations of the free water DTI model
+Don't forget to change the name of the Name-YEAR file to reflect all the
+authors name and the current year.
 
-run_simulations.py - code to generate the article's simulation
-                    (a notebook version of this file can be found in the notebook folder 
-                     and it is entitled as run_simulations.ipynb)
+### Required tools for producing the pdf
 
-run_invivo_data.py - code to generate the article's real data analysis
-                    (a notebook version of this file can be found in the notebook folder 
-                     and it is entitled as run_data.ipynb)
+You'll need [pandoc](http://pandoc.org) (a universal document converter) and a
+full [TeX distribution](https://www.tug.org/texlive/).
 
-As the main article mention, to run these procedures you need a Dipy instalation. For this
-please follow the steps discrebed in [dipy's website](http://nipy.org/dipy/installation.html)
+For pandoc, you'll also need the
+[pandoc-crossref](https://github.com/lierdakil/pandoc-crossref) filter that you can
+easily install with:
+
+```
+$ cabal update
+$ cabal install pandoc-crossref
+```
+
+### How to build the PDF ?
+
+In a console, type:
+
+```
+pandoc --standalone --filter ~/.cabal/bin/pandoc-crossref --template=rescience-template.tex --latex-engine=xelatex --biblatex --bibliography=bibliography.bib -M "crossrefYaml=crossref.yaml" --output Name-YEAR.tex Name-YEAR.md
+xelatex Name-YEAR
+biber Name-YEAR
+xelatex Name-YEAR
+xelatex Name-YEAR
+```
+
+Alternativaley, you can also type `make` after having edited the Makefile.
